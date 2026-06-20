@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Solvent v0.3 Demo</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Solvent v0.3 Demo</h1>
+        <p id="subtitle">Deterministic freelance-operation trace viewer</p>
+      </div>
+      <nav class="tabs" aria-label="View">
+        <button id="trace-tab" class="active" type="button">Trace</button>
+        <button id="compare-tab" type="button">Compare</button>
+      </nav>
+    </header>
+
+    <main>
+      <section id="trace-view">
+        <div class="selectors">
+          <label>Config <select id="config-select"></select></label>
+          <label>Seed <select id="seed-select"></select></label>
+          <label>Red-team <select id="redteam-select"></select></label>
+          <button id="jump-manipulation" type="button">Manipulation</button>
+          <button id="jump-failure" type="button">Verifier fail</button>
+        </div>
+        <div class="trace-grid">
+          <aside class="panel timeline-panel">
+            <h2>Timeline</h2>
+            <ol id="event-list" class="event-list"></ol>
+          </aside>
+          <section class="panel detail-panel">
+            <h2 id="event-title">Event Detail</h2>
+            <p id="event-summary" class="muted"></p>
+            <div id="artifact-block" class="hidden">
+              <h3>Artifact</h3>
+              <pre id="artifact-preview"></pre>
+            </div>
+            <div id="verify-block" class="hidden">
+              <h3>Verifier</h3>
+              <div id="verify-summary"></div>
+              <table id="verify-table"></table>
+            </div>
+            <h3>Payload</h3>
+            <pre id="payload-json"></pre>
+          </section>
+          <aside class="panel score-panel">
+            <h2>Scorecard</h2>
+            <div id="scorecard"></div>
+            <h2>Balance</h2>
+            <div id="balance-chart" class="chart"></div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="compare-view" class="hidden">
+        <div class="panel">
+          <h2>Comparison</h2>
+          <table id="compare-table" class="metric-table"></table>
+        </div>
+      </section>
+    </main>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
