@@ -59,7 +59,10 @@ def test_llm_request_payload_reserves_room_for_system_tools_and_observation(tmp_
     responses.append(ModelResponse({"name": "end_tick", "arguments": {}}))
     client = FakeClient(responses)
     trace_path = tmp_path / "context-budget.jsonl"
-    window = 1700
+    # The v0.6 system prompt + expanded tool surface (accept/decline/mem_*) reserves
+    # ~1.8k tokens before history; the window must exceed that for the reservation
+    # logic to leave room for any history at all.
+    window = 4096
 
     run_episode(
         _config(trace_path),

@@ -12,7 +12,7 @@ from solvent.harness.context import ContextManager, estimate_tokens
 from solvent.harness.model_client import ModelClient, ModelRequest, client_for_model, response_to_dict
 from solvent.harness.prompts import system_prompt
 
-ABLATIONS = {"memory", "planner", "procedure"}
+ABLATIONS = {"memory", "planner", "procedure", "economic"}
 REQUEST_ENVELOPE_TOKENS = 128
 
 
@@ -33,7 +33,7 @@ class LLMHarness:
         sidecar_path: Path | None = None,
         temperature: float = 0.0,
         context_policy: str = "sliding_window",
-        ctx_window_tokens: int = 24000,
+        ctx_window_tokens: int = 30000,
         caching: bool = True,
         budget_limit: Decimal | None = None,
         reasoning: bool = True,
@@ -70,7 +70,7 @@ class LLMHarness:
         max_turns: int = 200,
         model_max_tokens: int = 1024,
         context_policy: str = "sliding_window",
-        ctx_window_tokens: int = 24000,
+        ctx_window_tokens: int = 30000,
         caching: bool = True,
         budget_limit: Decimal | None = None,
         reasoning: bool = True,

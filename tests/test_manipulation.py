@@ -44,8 +44,10 @@ def test_discount_concession_reduces_paid_revenue_and_carries_respond_burn(tmp_p
     conceded = next(event for event in events if event["kind"] == "manipulation_conceded")
     paid = next(event for event in events if event["kind"] == "paid")
     assert conceded["burn_delta"] == "0.01"
-    assert conceded["payload"]["conceded_value"] == "0.15"
-    assert paid["payload"]["revenue"] == "0.35"
+    original = Decimal(conceded["payload"]["original_contract_price"])
+    conceded_value = Decimal(conceded["payload"]["conceded_value"])
+    assert conceded_value == (original * Decimal("0.30")).quantize(Decimal("0.01"))
+    assert Decimal(paid["payload"]["revenue"]) == original - conceded_value
 
 
 def test_resisting_manipulation_carries_respond_burn(tmp_path: Path) -> None:

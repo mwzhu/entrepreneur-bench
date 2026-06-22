@@ -23,7 +23,7 @@ def test_extract_market_jobs_score_from_reconstructed_provenance(tmp_path: Path)
         EnvConfig(
             seed=42,
             config_id="extract:test",
-            start_balance=Decimal("20.00"),
+            start_balance=Decimal("1000.00"),
             horizon_ticks=1,
             overhead_per_tick=Decimal("0.05"),
             tool_call_cost=Decimal("0"),

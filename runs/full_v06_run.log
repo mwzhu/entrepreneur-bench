@@ -1,0 +1,10 @@
+Solvent experiment run
+name: full_v06
+run_dir: runs/full_v06
+total_cells: 8
+completed: 8
+failed: 0
+skipped_budget: 0
+failed_budget: 0
+actual_spend: 6.547281
+ledger: runs/full_v06/ledger.json

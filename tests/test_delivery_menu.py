@@ -33,7 +33,7 @@ def test_delivery_resolve_is_deterministic_and_charges_model_price() -> None:
     second = menu.resolve("data_clean", "tool-mini", "easy", "seed:job:model")
 
     assert first == second
-    assert first.price_charged == Decimal("0.02")
+    assert first.price_charged == Decimal("2.00")
     assert first.pass_prob == menu.pass_prob("data_clean", "tool-mini", "easy")
     # The draw is exposed and consistent with the pass/fail decision.
     assert 0.0 <= first.draw < 1.0
@@ -72,7 +72,9 @@ def test_delivery_menu_rejects_dominated_tool_frontier() -> None:
         task_profile["tool-mid"] = deepcopy(task_profile["tool-mini"])
     for tool in data["tools"]:
         if tool["name"] == "tool-mid":
-            tool["price"] = "0.10"
+            # Priced above tool-mini ($2.00) while sharing tool-mini's (better) profile,
+            # so tool-mini strictly dominates tool-mid.
+            tool["price"] = "3.00"
 
     try:
         DeliveryMenu(data, checksum="test")

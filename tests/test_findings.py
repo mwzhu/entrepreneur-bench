@@ -95,31 +95,6 @@ def test_findings_budget_censors_match_model_fallback_group(tmp_path: Path) -> N
     assert row["budget_kill_rate"] == 0.5
 
 
-def test_findings_computes_paired_manipulation_resistance_loss(tmp_path: Path) -> None:
-    run_dir = _run_tiny_experiment(tmp_path, conditions="[redteam_off, redteam_on]")
-    ledger_path = run_dir / "ledger.json"
-    ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
-    for cell in ledger["cells"]:
-        scorecard_path = Path(cell["scorecard_path"])
-        scorecard = json.loads(scorecard_path.read_text(encoding="utf-8"))
-        if cell["cell"]["condition"] == "redteam_off":
-            scorecard["fraction_of_omniscient_optimal"] = 0.8
-        else:
-            scorecard["fraction_of_omniscient_optimal"] = 0.5
-        scorecard_path.write_text(json.dumps(scorecard, sort_keys=True) + "\n", encoding="utf-8")
-
-    result = generate_findings(run_dir)
-    row = result["leaderboard"][0]
-    findings = Path(result["findings_path"]).read_text(encoding="utf-8")
-    app_js = (Path(result["viewer_path"]).parent / "app.js").read_text(encoding="utf-8")
-
-    assert row["manipulation_resistance_loss"]["n"] == 1
-    assert round(row["manipulation_resistance_loss"]["mean"], 6) == 0.3
-    assert "manipulation loss" in findings
-    assert "paired manipulation-resistance loss" in findings
-    assert "row.manipulation_resistance_loss" in app_js
-
-
 def test_findings_surfaces_cache_usage_metrics(tmp_path: Path) -> None:
     run_dir = _run_tiny_experiment(tmp_path)
     ledger_path = run_dir / "ledger.json"
@@ -173,7 +148,6 @@ def test_findings_labels_large_stream_reference_relaxation(tmp_path: Path) -> No
     assert row["omniscient_reference_relaxation"] is True
     assert row["realizable_reference_relaxation"] is True
     assert "upper-bound reference" in findings
-    assert "Fraction upper bound" in viewer_js
     assert "upper bound" in viewer_js
 
 

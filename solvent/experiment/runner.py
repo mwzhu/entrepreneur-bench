@@ -163,11 +163,11 @@ def _run_cell(config: ExperimentConfig, cell: ExperimentCell, trace_path: Path, 
     env_config = EnvConfig(
         seed=cell.seed,
         config_id=cell.config_id,
-        start_balance=Decimal("20.00"),
+        start_balance=Decimal("1000.00"),
         horizon_ticks=config.horizon_minutes,
         horizon_minutes=config.horizon_minutes,
-        overhead_per_tick=Decimal("0.05"),
-        overhead_per_minute=Decimal("0.000035"),
+        overhead_per_tick=Decimal("10"),
+        overhead_per_minute=Decimal("0.006944"),
         tool_call_cost=Decimal("0.01") if cell.config_id.startswith("stub:") else Decimal("0"),
         trace_path=trace_path,
         market_version="business_stream_v0_5",
@@ -175,6 +175,7 @@ def _run_cell(config: ExperimentConfig, cell: ExperimentCell, trace_path: Path, 
         arrival_rate_per_day=Decimal(str(config.market.arrival_rate_per_day)),
         decoy_rate=Decimal(str(config.market.decoy_rate)),
         manipulation_rate=Decimal(str(config.market.manipulation_rate)),
+        difficulty_distribution=config.market.difficulty_distribution,
         redteam_enabled=cell.redteam_enabled,
         delivery_mode="direct" if cell.config_id.startswith("stub:") else "tool_mediated",
         task_mix=config.market.task_mix,
@@ -198,9 +199,12 @@ def _harness_for_cell(config: ExperimentConfig, cell: ExperimentCell, budget_lim
     family, mode = cell.config_id.split(":", 1) if ":" in cell.config_id else (cell.config_id, "base")
     if family == "stub":
         return StubHarness(mode)
+    expected_jobs = max(1, round(config.market.arrival_rate_per_day * config.horizon_minutes / 1440))
+    max_turns = config.max_turns or (expected_jobs * 10 + 200)
     return LLMHarness.from_config_id(
         cell.config_id,
         temperature=config.temperature,
+        max_turns=max_turns,
         context_policy=config.context_policy,
         ctx_window_tokens=config.ctx_window_tokens,
         caching=config.caching,
@@ -220,7 +224,11 @@ def _cell_budget_limit(config: ExperimentConfig, state: ExperimentState, record:
         return None
     if max_workers == 1:
         return max(Decimal("0"), Decimal(str(config.budget_usd)) - state.actual_spend)
-    return record.estimated_cost
+    # Per-cell mid-flight cap is a runaway breaker, not aggregate budget control
+    # (that is handled by the launch gate + reserved_spend). Give it generous
+    # headroom over the estimate so normal cost variance (caching routing, Poisson
+    # job counts) never truncates a healthy cell; only a true N-times-over runaway trips it.
+    return (record.estimated_cost * Decimal(str(config.cell_budget_headroom))).quantize(Decimal("0.000001"))
 
 
 def _trace_path(run_dir: Path, cell: ExperimentCell) -> Path:

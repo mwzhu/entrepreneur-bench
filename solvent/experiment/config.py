@@ -16,6 +16,7 @@ class MarketConfig:
     arrival_rate_per_day: float = 1.0
     decoy_rate: float = 0.3
     manipulation_rate: float = 0.0
+    difficulty_distribution: dict[str, float] = field(default_factory=lambda: {"easy": 1.0})
 
 
 @dataclass(frozen=True)
@@ -26,13 +27,15 @@ class ExperimentConfig:
     samples_per_seed: int = 1
     conditions: list[str] = field(default_factory=lambda: ["redteam_off"])
     horizon_minutes: int = 5 * 1440
+    max_turns: int | None = None
     market: MarketConfig = field(default_factory=MarketConfig)
-    context_policy: str = "sliding_window"
-    ctx_window_tokens: int = 24000
+    context_policy: str = "anchored"
+    ctx_window_tokens: int = 30000
     ablations: list[str] = field(default_factory=lambda: ["base"])
     caching: bool = False
     temperature: float = 0.0
     budget_usd: float = 0.0
+    cell_budget_headroom: float = 5.0
     parallelism: int = 1
 
     def __post_init__(self) -> None:
@@ -52,6 +55,8 @@ class ExperimentConfig:
             raise ValueError("ctx_window_tokens must be at least 1")
         if self.parallelism < 1:
             raise ValueError("parallelism must be at least 1")
+        if self.cell_budget_headroom < 1:
+            raise ValueError("cell_budget_headroom must be at least 1")
 
     @property
     def cell_count(self) -> int:
@@ -73,6 +78,9 @@ def experiment_config_from_dict(data: dict[str, Any]) -> ExperimentConfig:
         arrival_rate_per_day=float(market_raw.get("arrival_rate_per_day", market_raw.get("arrival_rate", 1.0))),
         decoy_rate=float(market_raw.get("decoy_rate", 0.3)),
         manipulation_rate=float(market_raw.get("manipulation_rate", 0.0)),
+        difficulty_distribution=_float_dict(market_raw["difficulty_distribution"])
+        if "difficulty_distribution" in market_raw
+        else {"easy": 1.0},
     )
     seeds_raw = data.get("seeds", "dev")
     seeds = parse_seeds(str(seeds_raw)) if isinstance(seeds_raw, str) else [int(seed) for seed in seeds_raw]
@@ -80,6 +88,7 @@ def experiment_config_from_dict(data: dict[str, Any]) -> ExperimentConfig:
     if horizon is None:
         horizon_days = data.get("horizon_days")
         horizon = int(float(horizon_days) * 1440) if horizon_days is not None else 5 * 1440
+    max_turns = int(data["max_turns"]) if "max_turns" in data and data["max_turns"] is not None else None
     return ExperimentConfig(
         name=str(data.get("name", "")),
         models=[str(model) for model in _list_value(data.get("models", []))],
@@ -87,13 +96,15 @@ def experiment_config_from_dict(data: dict[str, Any]) -> ExperimentConfig:
         samples_per_seed=int(data.get("samples_per_seed", 1)),
         conditions=[str(condition) for condition in _list_value(data.get("conditions", ["redteam_off"]))],
         horizon_minutes=int(horizon),
+        max_turns=max_turns,
         market=market,
-        context_policy=str(data.get("context_policy", "sliding_window")),
-        ctx_window_tokens=int(data.get("ctx_window_tokens", 24000)),
+        context_policy=str(data.get("context_policy", "anchored")),
+        ctx_window_tokens=int(data.get("ctx_window_tokens", 30000)),
         ablations=[str(ablation) for ablation in _list_value(data.get("ablations", ["base"]))],
         caching=bool(data.get("caching", False)),
         temperature=float(data.get("temperature", 0.0)),
         budget_usd=float(data.get("budget_usd", 0.0)),
+        cell_budget_headroom=float(data.get("cell_budget_headroom", 5.0)),
         parallelism=int(data.get("parallelism", 1)),
     )
 

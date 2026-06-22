@@ -39,7 +39,11 @@ def test_fake_client_drives_tool_mediated_episode_and_records_compute(tmp_path: 
         LLMHarness(model="claude-opus-4-8", ablations={"procedure"}, client=client),
     )
 
-    assert summary.end_balance == Decimal("20.00")
+    events = _events(trace_path)
+    paid_revenue = next(Decimal(event["payload"]["revenue"]) for event in events if event["kind"] == "paid")
+    # Brain spend is metered separately; business balance only sees delivery price,
+    # overhead, and realized contract revenue.
+    assert summary.end_balance == Decimal("1000.00") - Decimal("45.00") - Decimal("0.05") + paid_revenue
     sidecar = trace_path.with_suffix(".llm.jsonl")
     assert sidecar.exists()
     sidecar_rows = [json.loads(line) for line in sidecar.read_text(encoding="utf-8").splitlines()]
@@ -48,7 +52,6 @@ def test_fake_client_drives_tool_mediated_episode_and_records_compute(tmp_path: 
     assert "bid" in sidecar_rows[0]["request"]["tools"]
     assert "available_jobs" in sidecar_rows[0]["request"]["observation"]
 
-    events = _events(trace_path)
     assert [event["kind"] for event in events].count("brain_metered") == 6
     assert "delivery_passed" in [event["kind"] for event in events]
     assert all(event["burn_delta"] == "0" for event in events if event["kind"] == "brain_metered")
@@ -60,7 +63,7 @@ def test_fake_client_drives_tool_mediated_episode_and_records_compute(tmp_path: 
     assert scorecard.compute.brain_cost > Decimal("0")
     assert scorecard.delivery.pass_rate == 1.0
     assert scorecard.tool_selection is not None
-    assert scorecard.tool_selection.tool_price_charged == Decimal("0.45")
+    assert scorecard.tool_selection.tool_price_charged == Decimal("45.00")
 
 
 def test_malformed_model_tool_call_becomes_invalid_action(tmp_path: Path) -> None:
@@ -98,7 +101,7 @@ def test_harness_raises_and_traces_budget_exceeded(tmp_path: Path) -> None:
 
 
 def test_ablation_spec_is_order_insensitive_and_rejects_base_mix() -> None:
-    assert parse_ablation_spec("+procedure+memory") == {"memory", "procedure"}
+    assert parse_ablation_spec("+procedure+memory+economic") == {"memory", "procedure", "economic"}
     try:
         parse_ablation_spec("base+procedure")
     except ValueError as exc:
@@ -107,12 +110,28 @@ def test_ablation_spec_is_order_insensitive_and_rejects_base_mix() -> None:
         raise AssertionError("base mixed with ablations should fail")
 
 
-def test_system_prompt_discourages_premature_end_tick() -> None:
+def test_system_prompt_base_states_mechanics_without_strategy_scaffolds() -> None:
     prompt = system_prompt(set())
 
-    assert "Do not advance time" in prompt
-    assert "Revenue requires a final bid" in prompt
-    assert "avoid multi-dollar bids" in prompt
+    assert "Your goal is to maximize your final balance" in prompt
+    assert "visible starting_price" in prompt
+    assert "hidden client ceiling" in prompt
+    assert "delivery model from the public menu" in prompt
+    assert "single delivery attempt per job" in prompt
+    assert "charge applies whether or not the delivery passes" in prompt
+    assert "Calling end_tick advances business time" in prompt
+    assert "Prefer actions with positive expected value" not in prompt
+    assert "Counter just below" not in prompt
+    assert "Do not advance time" not in prompt
+    assert "price relative to the visible starting_price" not in prompt
+
+
+def test_economic_ablation_adds_general_ev_guidance_without_ceiling_recipe() -> None:
+    prompt = system_prompt({"economic"})
+
+    assert "Prefer actions with positive expected value" in prompt
+    assert "customer concessions" in prompt
+    assert "Counter just below" not in prompt
 
 
 def test_anthropic_tool_uses_adapter_input_schema() -> None:
@@ -229,7 +248,7 @@ def _config(trace_path: Path) -> EnvConfig:
     return EnvConfig(
         seed=42,
         config_id="claude-opus-4-8:+procedure",
-        start_balance=Decimal("20.00"),
+        start_balance=Decimal("1000.00"),
         horizon_ticks=1,
         overhead_per_tick=Decimal("0.05"),
         tool_call_cost=Decimal("0"),

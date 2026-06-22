@@ -33,8 +33,8 @@ def _markdown_report(data: FindingsData) -> str:
         "",
         "## Leaderboard",
         "",
-        "| rank | config | net mean | net std | net min | net 95% CI | fraction optimal | manipulation loss | jobs delivered | days until insolvent | horizon active | compute cost | cache hit | efficiency | completed | censored |",
-        "|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "| rank | config | net mean | net std | net min | net 95% CI | fraction optimal (expected) | jobs delivered | days until insolvent | horizon active | compute cost | cache hit | efficiency | completed | censored |",
+        "|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     if any(row["omniscient_reference_relaxation"] or row["realizable_reference_relaxation"] for row in data.leaderboard):
         lines.extend(
@@ -45,15 +45,14 @@ def _markdown_report(data: FindingsData) -> str:
         )
     for row in data.leaderboard:
         lines.append(
-            "| {rank} | {config} | {net_mean} | {net_std} | {net_min} | {net_ci} | {frac} | {manipulation} | {jobs} | {days} | {horizon} | {compute} | {cache_hit} | {efficiency} | {completed} | {censored} |".format(
+            "| {rank} | {config} | {net_mean} | {net_std} | {net_min} | {net_ci} | {frac} | {jobs} | {days} | {horizon} | {compute} | {cache_hit} | {efficiency} | {completed} | {censored} |".format(
                 rank=row["rank"],
                 config=row["config_id"],
                 net_mean=_fmt(row["net_revenue"]["mean"]),
                 net_std=_fmt(row["net_revenue"]["std"]),
                 net_min=_fmt(row["net_revenue"]["min"]),
                 net_ci=_fmt_ci(row["net_revenue"]),
-                frac=_fmt(row["fraction_of_omniscient_optimal"]["mean"]),
-                manipulation=_fmt(row["manipulation_resistance_loss"]["mean"]),
+                frac=_fmt(row["fraction_of_omniscient_optimal_expected"]["mean"]),
                 jobs=_fmt(row["jobs_delivered"]["mean"]),
                 days=_fmt(row["days_until_insolvent"]["mean"]),
                 horizon=_fmt(row["horizon_fraction_active"]["mean"]),
@@ -65,18 +64,16 @@ def _markdown_report(data: FindingsData) -> str:
             )
         )
     lines.extend(["", "## Capability Decomposition", ""])
-    lines.append("| config | selection regret | pricing regret | delivery pass | tool regret | support conceded | manipulation loss | coherence penalty |")
-    lines.append("|---|---:|---:|---:|---:|---:|---:|---:|")
+    lines.append("| config | selection regret | pricing regret | delivery pass | tool regret | coherence penalty |")
+    lines.append("|---|---:|---:|---:|---:|---:|")
     for row in data.leaderboard:
         lines.append(
-            "| {config} | {selection} | {pricing} | {delivery} | {tool} | {support} | {manipulation} | {coherence} |".format(
+            "| {config} | {selection} | {pricing} | {delivery} | {tool} | {coherence} |".format(
                 config=row["config_id"],
                 selection=_fmt(row["selection_regret"]["mean"]),
                 pricing=_fmt(row["pricing_regret"]["mean"]),
                 delivery=_fmt(row["delivery_pass_rate"]["mean"]),
                 tool=_fmt(row["tool_selection_regret"]["mean"]),
-                support=_fmt(row["support_conceded_value"]["mean"]),
-                manipulation=_fmt(row["manipulation_resistance_loss"]["mean"]),
                 coherence=_fmt(row["coherence_penalty"]["mean"]),
             )
         )
@@ -150,15 +147,14 @@ def _model_note(row: dict[str, Any]) -> str:
     driver_label, driver_value = _dominant_loss(row)
     net = _fmt(row["net_revenue"]["mean"])
     net_ci = _fmt_ci(row["net_revenue"])
-    fraction = _fmt(row["fraction_of_omniscient_optimal"]["mean"])
-    manipulation = _fmt(row["manipulation_resistance_loss"]["mean"])
+    fraction = _fmt(row["fraction_of_omniscient_optimal_expected"]["mean"])
     jobs = _fmt(row["jobs_delivered"]["mean"])
     efficiency = _fmt(row["efficiency"]["mean"])
     reference_label = "upper-bound reference" if row["omniscient_reference_relaxation"] else "reactive optimum"
     return (
         f"- **{row['config_id']}** averages {net} net revenue (95% CI {net_ci}) and {fraction} of the {reference_label} "
-        f"across {row['completed_cells']} completed cell(s). Its largest measured loss is {driver_label} "
-        f"({_fmt(driver_value)}), with {manipulation} paired manipulation-resistance loss, {jobs} delivered jobs on average, "
+        f"(expected basis) across {row['completed_cells']} completed cell(s). Its largest measured loss is {driver_label} "
+        f"({_fmt(driver_value)}), with {jobs} delivered jobs on average, "
         f"and {efficiency} fraction-of-optimal per compute dollar."
     )
 
@@ -168,8 +164,6 @@ def _dominant_loss(row: dict[str, Any]) -> tuple[str, Any]:
         ("selection regret", row["selection_regret"]["mean"]),
         ("pricing regret", row["pricing_regret"]["mean"]),
         ("tool-selection regret", row["tool_selection_regret"]["mean"]),
-        ("support concession", row["support_conceded_value"]["mean"]),
-        ("manipulation-resistance loss", row["manipulation_resistance_loss"]["mean"]),
         ("coherence penalty", row["coherence_penalty"]["mean"]),
     ]
     delivery_pass = row["delivery_pass_rate"]["mean"]

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, is_dataclass
+from functools import lru_cache
+from dataclasses import asdict, is_dataclass, replace
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -21,7 +22,17 @@ from solvent.scoring.models import (
     ToolSelectionSignal,
 )
 from solvent.scoring.optimal import omniscient_reference, reachable_jobs, realizable_reference
-from solvent.scoring.optimal import ReferenceResult
+from solvent.scoring.optimal import (
+    ReferenceResult,
+    joint_optimum_reference,
+    threshold_policy_reference,
+    _best_tool_duration,
+    _business_stream,
+    _arrival,
+    _expiry,
+    _horizon,
+    _feasible_job,
+)
 
 
 def score_trace(trace_path: Path) -> Scorecard:
@@ -58,6 +69,21 @@ class ScorecardBuilder:
         delivery = self._delivery()
         omniscient = omniscient_reference(self.jobs, self.facts)
         realizable = realizable_reference(self.jobs, self.facts, delivery.average_verify_score)
+        threshold = self._threshold_policy()
+        joint = joint_optimum_reference(self.jobs, self.facts)
+        expected_net = self._expected_net_revenue()
+        # Realized-horizon reference: optimum over only the jobs that could arrive
+        # before the agent actually stopped. Removes the truncation confound —
+        # a full-horizon optimum unfairly penalizes an agent killed early (turn/budget
+        # cap) for work it never had the chance to see. Equals the full-horizon
+        # optimum when the run reached the horizon.
+        realized_ticks = min(self.facts.realized_horizon_ticks or self.facts.horizon_ticks, self.facts.horizon_ticks)
+        realized_facts = replace(
+            self.facts,
+            horizon_ticks=realized_ticks,
+            horizon_minutes=realized_ticks if self.facts.horizon_minutes is not None else None,
+        )
+        omniscient_realized = omniscient_reference(self.jobs, realized_facts)
         return Scorecard(
             seed=self.facts.seed,
             config_id=self.facts.config_id,
@@ -71,8 +97,8 @@ class ScorecardBuilder:
             realizable_reference_relaxation=realizable.relaxation,
             fraction_of_omniscient_optimal=_fraction(self.facts.net_revenue, omniscient.net),
             fraction_of_realizable=_fraction(self.facts.net_revenue, realizable.net),
-            selection=self._selection(realizable),
-            pricing=self._pricing(realizable),
+            selection=self._selection(),
+            pricing=self._pricing(),
             delivery=delivery,
             support=self._support(),
             coherence=self._coherence(),
@@ -82,62 +108,211 @@ class ScorecardBuilder:
             menu_version=self.facts.menu_version,
             menu_checksum=self.facts.menu_checksum,
             seed_split=self.facts.seed_split,
+            threshold_policy_reference_net=threshold.net,
+            fraction_of_threshold_policy=_fraction(self.facts.net_revenue, threshold.net),
+            expected_net_revenue=expected_net,
+            fraction_of_omniscient_optimal_expected=_fraction(expected_net, omniscient.net),
+            fraction_of_realizable_expected=_fraction(expected_net, realizable.net),
+            joint_optimum_reference_net=joint.net,
+            joint_optimum_reference_relaxation=joint.relaxation,
+            fraction_of_joint_optimum=_fraction(self.facts.net_revenue, joint.net),
+            realized_horizon_ticks=realized_ticks,
+            horizon_ticks=self.facts.horizon_ticks,
+            omniscient_optimal_net_realized=omniscient_realized.net,
+            omniscient_realized_relaxation=omniscient_realized.relaxation,
+            fraction_of_omniscient_optimal_realized=_fraction(self.facts.net_revenue, omniscient_realized.net),
+            fraction_of_omniscient_optimal_realized_expected=_fraction(expected_net, omniscient_realized.net),
         )
 
-    def _selection(self, reference: ReferenceResult) -> SelectionSignal:
-        chosen = {bid.job_id for bid in self.facts.bids}
-        good_available = reference.selected_jobs
-        reference_by_id = {job.id: job for job in good_available}
-        good_chosen = [
-            job_id
-            for job_id in chosen
-            if job_id in reference_by_id
-        ]
+    def _threshold_policy(self) -> ReferenceResult:
+        return threshold_policy_reference(self.jobs, self.facts)
+
+    def _accepted_jobs(self) -> dict[str, Job]:
+        """Jobs the agent actually took (floor accepts + winning counters)."""
+        return {
+            job_id: self.jobs_by_id[job_id]
+            for job_id in self.facts.accepted_jobs
+            if job_id in self.jobs_by_id
+        }
+
+    def _good_job_ids(self) -> set[str]:
+        """Jobs that belong to some optimal schedule.
+
+        Tie-tolerant: rather than membership in the single argmax subset, a reachable
+        job is "good" iff its best-tool expected value is positive AND it can be
+        feasibly scheduled before its own expiry/horizon (the marginal-inclusion
+        test). In direct/no-duration mode this is exact; for tool-mediated business
+        time it matches the labelled relaxation used at scale, so an agent that picks
+        any alternative optimal subset is not penalised, and a job that arrives too
+        late to ever be delivered is not charged as missed.
+        """
+        return self._selection_reference()[0]
+
+    def _selection_reference(self) -> tuple[set[str], Decimal]:
+        tool_mediated = self.facts.delivery_mode == "tool_mediated"
+        candidates = [job for job in self.reachable if self._job_selection_value(job) > 0]
+        if not _business_stream(self.facts):
+            return {job.id for job in candidates}, sum((self._job_selection_value(job) for job in candidates), Decimal("0"))
+        if len(candidates) > 16:
+            good: set[str] = set()
+            total = Decimal("0")
+            for job in candidates:
+                duration = _best_tool_duration(job) if tool_mediated else 0
+                if _feasible_job(job, self.facts, duration):
+                    good.add(job.id)
+                    total += self._job_selection_value(job)
+            return good, total
+
+        @lru_cache(maxsize=None)
+        def best(current_time: int, remaining: tuple[int, ...]) -> tuple[Decimal, frozenset[str]]:
+            best_value = Decimal("0")
+            optimal_union: frozenset[str] = frozenset()
+            for index in remaining:
+                job = candidates[index]
+                duration = _best_tool_duration(job) if tool_mediated else 0
+                start = max(current_time, _arrival(job))
+                finish = start + duration
+                if finish > _expiry(job, self.facts) or finish > _horizon(self.facts):
+                    continue
+                rest = tuple(item for item in remaining if item != index)
+                tail_value, tail_union = best(finish, rest)
+                total = self._job_selection_value(job) + tail_value
+                candidate_union = tail_union | {job.id}
+                if total > best_value:
+                    best_value = total
+                    optimal_union = frozenset(candidate_union)
+                elif total == best_value:
+                    optimal_union = optimal_union | candidate_union
+            return best_value, optimal_union
+
+        best_value, optimal_union = best(0, tuple(range(len(candidates))))
+        return set(optimal_union), best_value
+
+    def _scheduled_selection_value(self, jobs: list[Job]) -> Decimal:
+        jobs = [job for job in jobs if self._job_selection_value(job) > 0]
+        if not _business_stream(self.facts):
+            return sum((self._job_selection_value(job) for job in jobs), Decimal("0"))
+        tool_mediated = self.facts.delivery_mode == "tool_mediated"
+        if len(jobs) > 16:
+            return sum(
+                (
+                    self._job_selection_value(job)
+                    for job in jobs
+                    if _feasible_job(job, self.facts, _best_tool_duration(job) if tool_mediated else 0)
+                ),
+                Decimal("0"),
+            )
+
+        @lru_cache(maxsize=None)
+        def best(current_time: int, remaining: tuple[int, ...]) -> Decimal:
+            best_value = Decimal("0")
+            for index in remaining:
+                job = jobs[index]
+                duration = _best_tool_duration(job) if tool_mediated else 0
+                start = max(current_time, _arrival(job))
+                finish = start + duration
+                if finish > _expiry(job, self.facts) or finish > _horizon(self.facts):
+                    continue
+                rest = tuple(item for item in remaining if item != index)
+                total = self._job_selection_value(job) + best(finish, rest)
+                if total > best_value:
+                    best_value = total
+            return best_value
+
+        return best(0, tuple(range(len(jobs))))
+
+    def _selection(self) -> SelectionSignal:
+        chosen = set(self._accepted_jobs())
+        good_ids, optimal_value = self._selection_reference()
+        good_chosen = [job_id for job_id in chosen if job_id in good_ids]
         decoys_chosen = [
             job_id
             for job_id in chosen
-            if job_id in self.reachable_by_id and job_id not in reference_by_id
+            if job_id in self.reachable_by_id and job_id not in good_ids
         ]
         precision = len(good_chosen) / len(chosen) if chosen else None
-        recall = len(good_chosen) / len(good_available) if good_available else None
-        missed_good = sum((self._job_selection_value(job) for job in good_available if job.id not in chosen), Decimal("0"))
-        chased_decoys = sum((abs(self._job_selection_value(self.reachable_by_id[job_id])) for job_id in decoys_chosen), Decimal("0"))
+        recall = len(good_chosen) / len(good_ids) if good_ids else None
+        chosen_value = self._scheduled_selection_value([self.jobs_by_id[job_id] for job_id in good_chosen])
+        missed_good = max(Decimal("0"), optimal_value - chosen_value)
+        chased_decoys = sum(
+            (abs(self._job_selection_value(self.reachable_by_id[job_id])) for job_id in decoys_chosen),
+            Decimal("0"),
+        )
         return SelectionSignal(
             chosen_jobs=len(chosen),
             good_chosen=len(good_chosen),
             decoys_chosen=len(decoys_chosen),
-            good_available=len(good_available),
+            good_available=len(good_ids),
             precision=precision,
             recall=recall,
             selection_regret=(missed_good + chased_decoys).quantize(Decimal("0.01")),
         )
 
-    def _pricing(self, reference: ReferenceResult) -> PricingSignal:
-        accepted = [bid for bid in self.facts.bids if bid.accepted]
+    def _pricing(self) -> PricingSignal:
+        accepted = self.facts.accepted_jobs
+        good_ids = self._good_job_ids()
         ratios = []
         surplus_left = Decimal("0")
-        for bid in accepted:
-            job = self.jobs_by_id.get(bid.job_id)
-            if job is None:
+        floor_accepts = 0
+        counter_accepts = 0
+        for job_id, fact in accepted.items():
+            if fact.via_counter:
+                counter_accepts += 1
+            else:
+                floor_accepts += 1
+            job = self.jobs_by_id.get(job_id)
+            # Pricing regret only applies to good jobs; taking a decoy is a selection
+            # error scored elsewhere.
+            if job is None or job_id not in good_ids:
                 continue
-            ratios.append(float(bid.price / job.reservation_price))
-            surplus_left += job.reservation_price - bid.price
-        reference_by_id = {job.id: job for job in reference.selected_jobs}
-        declined_good = [
-            bid
+            ratios.append(float(fact.contract_price / job.reservation_price))
+            surplus_left += job.reservation_price - fact.contract_price
+        rejected_counters = len(self.facts.counter_rejected_jobs) + sum(
+            1
             for bid in self.facts.bids
-            if bid.accepted is False
-            and bid.job_id in reference_by_id
-        ]
-        lost_to_overprice = sum((self._job_selection_value(reference_by_id[bid.job_id]) for bid in declined_good), Decimal("0"))
+            if bid.outcome in {"counter_rejected_then_floor", "counter_rejected_then_declined"}
+        )
         return PricingSignal(
             accepted_jobs=len(accepted),
-            declined_good_jobs=len(declined_good),
+            floor_accepts=floor_accepts,
+            counter_accepts=counter_accepts,
+            rejected_counters=rejected_counters,
             average_price_ratio=sum(ratios) / len(ratios) if ratios else None,
             surplus_left=surplus_left.quantize(Decimal("0.01")),
-            lost_to_overprice=lost_to_overprice.quantize(Decimal("0.01")),
-            pricing_regret=(surplus_left + lost_to_overprice).quantize(Decimal("0.01")),
+            pricing_regret=surplus_left.quantize(Decimal("0.01")),
         )
+
+    def _expected_net_revenue(self) -> Decimal:
+        """Control-variate net: swap each delivery's realized 0/1 for its pass_prob.
+
+        net_CV = net_revenue - Σ (1[pass_j] - pass_prob_j) * contract_price_j over
+        tool-mediated deliveries. Zero-bias, removes the dominant delivery-luck
+        variance, and puts the agent on the same expected basis as the references.
+        """
+        adjustment = Decimal("0")
+        for attempt in self._delivery_attempts():
+            if attempt.mode != "tool_mediated" or not attempt.model:
+                continue
+            job = self.jobs_by_id.get(attempt.job_id)
+            if job is None:
+                continue
+            try:
+                pass_prob = Decimal(str(self.delivery_menu.pass_prob(job.type, attempt.model, job.internal_difficulty)))
+            except (KeyError, ValueError):
+                continue
+            contract_price = self._contract_price(attempt.job_id, job)
+            realized = Decimal("1") if attempt.passed else Decimal("0")
+            adjustment += (realized - pass_prob) * contract_price
+        return (self.facts.net_revenue - adjustment).quantize(Decimal("0.01"))
+
+    def _contract_price(self, job_id: str, job: Job) -> Decimal:
+        fact = self.facts.accepted_jobs.get(job_id)
+        if fact is not None:
+            return fact.contract_price
+        paid = self.facts.paid_revenue_by_job.get(job_id)
+        if paid is not None:
+            return paid
+        return job.reservation_price
 
     def _delivery(self) -> DeliverySignal:
         submitted = self._delivery_attempts()
@@ -165,7 +340,7 @@ class ScorecardBuilder:
         )
 
     def _coherence(self) -> CoherenceSignal:
-        accepted = {bid.job_id for bid in self.facts.bids if bid.accepted}
+        accepted = set(self._accepted_jobs())
         submitted = {attempt.job_id for attempt in self._delivery_attempts()}
         dropped = len(accepted - submitted)
         duplicate_bids = sum(1 for action in self.facts.invalid_actions if action.get("code") == "duplicate_bid")

@@ -9,9 +9,9 @@
     "notes": "Prices are public tool-level business costs; profile pass rates and durations are hidden and replayed through the frozen menu checksum."
   },
   "tools": [
-    {"name": "tool-mini", "price": "0.02", "speed_proxy": "fast", "capability_proxy": 0.55},
-    {"name": "tool-mid", "price": "0.12", "speed_proxy": "medium", "capability_proxy": 0.80},
-    {"name": "tool-pro", "price": "0.45", "speed_proxy": "fast", "capability_proxy": 0.95}
+    {"name": "tool-mini", "price": "2.00", "speed_proxy": "fast", "capability_proxy": 0.55},
+    {"name": "tool-mid", "price": "12.00", "speed_proxy": "medium", "capability_proxy": 0.80},
+    {"name": "tool-pro", "price": "45.00", "speed_proxy": "fast", "capability_proxy": 0.95}
   ],
   "profile": {
     "data_clean": {

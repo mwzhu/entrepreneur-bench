@@ -22,6 +22,9 @@ def test_tool_adapter_exposes_v0_4_action_space_and_public_observation(tmp_path:
         serialized = json.dumps(observation, sort_keys=True)
         assert "balance" in observation
         assert observation["available_jobs"]
+        assert "starting_price" in observation["available_jobs"][0]
+        assert "awaiting_decision" in observation
+        assert observation["awaiting_decision"] == []
         assert observation["delivery_models"] == []
         assert "reservation_price" not in serialized
         assert "internal_difficulty" not in serialized

@@ -1,0 +1,25 @@
+{
+  "created_or_updated_at": "2026-06-22T04:17:00.074666+00:00",
+  "estimate": {
+    "budget_usd": "0.000000",
+    "models": [
+      {
+        "cache_read_tokens_per_cell": 7266000,
+        "cells": 1,
+        "cost_per_cell": "1.098619",
+        "input_tokens_per_cell": 3114000,
+        "model": "deepseek-v3.2:base",
+        "output_tokens_per_cell": 55360,
+        "total_cost": "1.098619",
+        "turns_per_cell": 346
+      }
+    ],
+    "name": "validate_anchored_14d",
+    "over_budget": false,
+    "total_cells": 1,
+    "total_cost": "1.098619"
+  },
+  "name": "validate_anchored_14d",
+  "run_dir": "runs/validate_anchored_14d",
+  "schema_version": "solvent_experiment_state_v0_5"
+}

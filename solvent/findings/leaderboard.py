@@ -37,9 +37,11 @@ def build_findings_data(experiment_dir: Path) -> FindingsData:
         _leaderboard_row(key, groups[key], cells)
         for key in sorted(groups)
     ]
-    leaderboard.sort(key=lambda row: (row["net_revenue"]["mean"] is None, -(row["net_revenue"]["mean"] or 0), row["config_id"]))
+    leaderboard.sort(key=_leaderboard_sort_key)
     for index, row in enumerate(leaderboard, start=1):
         row["rank"] = index
+
+    paired_delta = _paired_delta(leaderboard, groups)
 
     summary = {
         "schema_version": "solvent_findings_v0_5",
@@ -49,7 +51,10 @@ def build_findings_data(experiment_dir: Path) -> FindingsData:
         "failed_cells": _failed_cells(cells),
         "metric_labels": {
             "net_revenue": "Net revenue",
-            "fraction_of_omniscient_optimal": "Fraction of optimal",
+            "fraction_of_omniscient_optimal_expected": "Fraction of optimal (expected)",
+            "fraction_of_omniscient_optimal": "Fraction of optimal (realized)",
+            "fraction_of_joint_optimum": "Fraction of joint optimum",
+            "fraction_of_threshold_policy": "Fraction of threshold policy",
             "delivery_pass_rate": "Delivery pass rate",
             "brain_compute_cost": "Brain compute cost",
             "brain_cache_read_tokens": "Brain cache-read tokens",
@@ -58,14 +63,15 @@ def build_findings_data(experiment_dir: Path) -> FindingsData:
             "selection_regret": "Selection regret",
             "pricing_regret": "Pricing regret",
             "tool_selection_regret": "Tool-selection regret",
-            "support_conceded_value": "Support conceded value",
             "coherence_penalty": "Coherence penalty",
-            "manipulation_resistance_loss": "Manipulation-resistance loss",
         },
         "configs": {
             row["config_id"]: {
                 "net_revenue": row["net_revenue"],
+                "fraction_of_omniscient_optimal_expected": row["fraction_of_omniscient_optimal_expected"],
                 "fraction_of_omniscient_optimal": row["fraction_of_omniscient_optimal"],
+                "fraction_of_joint_optimum": row["fraction_of_joint_optimum"],
+                "fraction_of_threshold_policy": row["fraction_of_threshold_policy"],
                 "omniscient_reference_relaxation": row["omniscient_reference_relaxation"],
                 "realizable_reference_relaxation": row["realizable_reference_relaxation"],
                 "delivery_pass_rate": row["delivery_pass_rate"],
@@ -77,13 +83,12 @@ def build_findings_data(experiment_dir: Path) -> FindingsData:
                 "selection_regret": row["selection_regret"],
                 "pricing_regret": row["pricing_regret"],
                 "tool_selection_regret": row["tool_selection_regret"],
-                "support_conceded_value": row["support_conceded_value"],
                 "coherence_penalty": row["coherence_penalty"],
-                "manipulation_resistance_loss": row["manipulation_resistance_loss"],
             }
             for row in leaderboard
         },
         "leaderboard": leaderboard,
+        "paired_delta": paired_delta,
         "money_shots": _money_shots(completed),
     }
     return FindingsData(experiment_dir=experiment_dir, leaderboard=leaderboard, summary=summary, runs=runs)
@@ -100,7 +105,6 @@ def _leaderboard_row(config_id: str, cells: list[dict[str, Any]], all_cells: lis
     cache_write_values = [_nested(card, "compute", "brain_cache_write_tokens") for card in scorecards if card.get("compute") is not None]
     fraction_values = [card.get("fraction_of_omniscient_optimal") for card in scorecards]
     cache_verification = _cache_verification(matching_all, scorecards)
-    manipulation_loss = _manipulation_resistance_loss(cells, scorecards)
     return {
         "config_id": config_id,
         "model": str(cells[0].get("cell", {}).get("model", config_id)),
@@ -108,7 +112,16 @@ def _leaderboard_row(config_id: str, cells: list[dict[str, Any]], all_cells: lis
         "censored_cells": failed_budget,
         "budget_kill_rate": failed_budget / total if total else 0.0,
         "net_revenue": summarize_distribution([_decimal(card.get("net_revenue")) for card in scorecards]).to_dict(),
+        "fraction_of_omniscient_optimal_expected": summarize_distribution(
+            [card.get("fraction_of_omniscient_optimal_expected") for card in scorecards]
+        ).to_dict(),
         "fraction_of_omniscient_optimal": summarize_distribution(fraction_values).to_dict(),
+        "fraction_of_joint_optimum": summarize_distribution(
+            [card.get("fraction_of_joint_optimum") for card in scorecards]
+        ).to_dict(),
+        "fraction_of_threshold_policy": summarize_distribution(
+            [card.get("fraction_of_threshold_policy") for card in scorecards]
+        ).to_dict(),
         "omniscient_reference_relaxation": any(bool(card.get("omniscient_reference_relaxation")) for card in scorecards),
         "realizable_reference_relaxation": any(bool(card.get("realizable_reference_relaxation")) for card in scorecards),
         "delivery_pass_rate": summarize_distribution([_nested(card, "delivery", "pass_rate") for card in scorecards]).to_dict(),
@@ -120,9 +133,7 @@ def _leaderboard_row(config_id: str, cells: list[dict[str, Any]], all_cells: lis
         "tool_selection_regret": summarize_distribution(
             [_decimal_at(card, "tool_selection", "oracle_tool_regret") for card in scorecards if card.get("tool_selection") is not None]
         ).to_dict(),
-        "support_conceded_value": summarize_distribution([_decimal_at(card, "support", "conceded_value") for card in scorecards]).to_dict(),
         "coherence_penalty": summarize_distribution([_decimal_at(card, "coherence", "coherence_penalty") for card in scorecards]).to_dict(),
-        "manipulation_resistance_loss": summarize_distribution(manipulation_loss).to_dict(),
         "brain_compute_cost": summarize_distribution(compute_costs).to_dict(),
         "brain_cache_read_tokens": summarize_distribution(cache_read_values).to_dict(),
         "brain_cache_write_tokens": summarize_distribution(cache_write_values).to_dict(),
@@ -136,6 +147,82 @@ def _leaderboard_row(config_id: str, cells: list[dict[str, Any]], all_cells: lis
             ]
         ).to_dict(),
     }
+
+
+def _leaderboard_sort_key(row: dict[str, Any]) -> tuple[bool, float, bool, float, str]:
+    headline = row["fraction_of_omniscient_optimal_expected"]["mean"]
+    net = row["net_revenue"]["mean"]
+    return (
+        headline is None,
+        -(headline or 0.0),
+        net is None,
+        -(net or 0.0),
+        row["config_id"],
+    )
+
+
+def _paired_delta(
+    leaderboard: list[dict[str, Any]],
+    groups: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any]:
+    """CRN paired-difference summary between the top-2 configs by net_revenue mean.
+
+    For each metric, gather per-shared-(seed, sample_index) deltas (rank1 - rank2)
+    over the intersection of cells present in BOTH configs, then summarize. Returns
+    a flat dict mapping metric_name -> distribution-summary-dict plus a `_pair` key
+    of [rank1_config_id, rank2_config_id]. Empty dict if fewer than 2 configs.
+    """
+    if len(leaderboard) < 2:
+        return {}
+    rank1 = leaderboard[0]["config_id"]
+    rank2 = leaderboard[1]["config_id"]
+    cells_a = groups.get(rank1, [])
+    cells_b = groups.get(rank2, [])
+    extractors: dict[str, Any] = {
+        "net_revenue": lambda card: _as_float(card.get("net_revenue")),
+        "fraction_of_omniscient_optimal_expected": lambda card: _as_float(card.get("fraction_of_omniscient_optimal_expected")),
+        "fraction_of_omniscient_optimal": lambda card: _as_float(card.get("fraction_of_omniscient_optimal")),
+        "fraction_of_threshold_policy": lambda card: _as_float(card.get("fraction_of_threshold_policy")),
+        "delivery_pass_rate": lambda card: _as_float(_nested(card, "delivery", "pass_rate")),
+        "selection_regret": lambda card: _as_float(_nested(card, "selection", "selection_regret")),
+        "pricing_regret": lambda card: _as_float(_nested(card, "pricing", "pricing_regret")),
+        "tool_selection_regret": lambda card: _as_float(_nested(card, "tool_selection", "oracle_tool_regret")),
+        "coherence_penalty": lambda card: _as_float(_nested(card, "coherence", "coherence_penalty")),
+    }
+    result: dict[str, Any] = {"_pair": [rank1, rank2]}
+    for metric, extractor in extractors.items():
+        deltas = _paired_metric_deltas(cells_a, cells_b, extractor)
+        result[metric] = summarize_distribution(deltas).to_dict()
+    return result
+
+
+def _paired_metric_deltas(
+    cells_a: list[dict[str, Any]],
+    cells_b: list[dict[str, Any]],
+    extractor: Any,
+) -> list[float]:
+    values_a = _keyed_metric(cells_a, extractor)
+    values_b = _keyed_metric(cells_b, extractor)
+    shared = sorted(set(values_a) & set(values_b))
+    return [values_a[key] - values_b[key] for key in shared]
+
+
+def _keyed_metric(cells: list[dict[str, Any]], extractor: Any) -> dict[tuple[int, int], float]:
+    keyed: dict[tuple[int, int], float] = {}
+    for cell in cells:
+        value = extractor(_scorecard_for_cell(cell))
+        if value is None:
+            continue
+        payload = cell.get("cell", {})
+        key = (int(payload.get("seed", 0)), int(payload.get("sample_index", 0)))
+        keyed[key] = value
+    return keyed
+
+
+def _as_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    return float(value)
 
 
 def _scorecard_for_cell(cell: dict[str, Any]) -> dict[str, Any]:
@@ -208,27 +295,10 @@ def _money_shots(cells: list[dict[str, Any]]) -> dict[str, str | None]:
     if not scored:
         return {"max_manipulation_concession": None, "worst_coherence": None, "best_efficiency": None}
     return {
-        "max_manipulation_concession": _cell_id(max(scored, key=lambda pair: _decimal_at(pair[1], "support", "conceded_value"))[0]),
+        "max_manipulation_concession": None,
         "worst_coherence": _cell_id(max(scored, key=lambda pair: _decimal_at(pair[1], "coherence", "coherence_penalty"))[0]),
         "best_efficiency": _cell_id(max(scored, key=lambda pair: _efficiency(pair[1]))[0]),
     }
-
-
-def _manipulation_resistance_loss(cells: list[dict[str, Any]], scorecards: list[dict[str, Any]]) -> list[float]:
-    off: dict[tuple[int, int], float] = {}
-    on: dict[tuple[int, int], float] = {}
-    for cell, scorecard in zip(cells, scorecards):
-        fraction = scorecard.get("fraction_of_omniscient_optimal")
-        if fraction is None:
-            continue
-        payload = cell.get("cell", {})
-        key = (int(payload.get("seed", 0)), int(payload.get("sample_index", 0)))
-        condition = str(payload.get("condition", ""))
-        if condition == "redteam_off":
-            off[key] = float(fraction)
-        elif condition == "redteam_on":
-            on[key] = float(fraction)
-    return [off[key] - on[key] for key in sorted(set(off) & set(on))]
 
 
 def _efficiency(scorecard: dict[str, Any]) -> float:

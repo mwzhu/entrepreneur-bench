@@ -58,6 +58,130 @@ def realizable_reference(jobs: list[Job], facts: TraceFacts, average_verify_scor
     return ReferenceResult(net=_reference_net(selected, facts, capability), selected_jobs=selected)
 
 
+def threshold_policy_reference(jobs: list[Job], facts: TraceFacts) -> ReferenceResult:
+    """Online single-server threshold policy (a beatable baseline, NOT a bound).
+
+    Greedily walks arrivals in order on a single server, accepting a job only when
+    it fits the remaining capacity AND its value-density clears an opportunity-cost
+    threshold (the mean value-density over candidates). relaxation=False because it
+    is an achievable online policy, not an upper bound.
+    """
+    tool_mediated = facts.delivery_mode == "tool_mediated"
+    if tool_mediated:
+        value_fn = _best_tool_value
+        duration_fn = _best_tool_duration
+    else:
+        value_fn = lambda job: job.true_value
+        duration_fn = lambda job: 0
+
+    candidates = sorted(
+        (job for job in jobs if _arrival(job) < _horizon(facts) and value_fn(job) > 0),
+        key=_arrival,
+    )
+    if not candidates:
+        net = (
+            _tool_reference_net([], facts)
+            if tool_mediated
+            else _reference_net([], facts, Decimal("1.0"))
+        )
+        return ReferenceResult(net=net, selected_jobs=[], relaxation=False)
+
+    densities = [value_fn(job) / Decimal(max(duration_fn(job), 1)) for job in candidates]
+    theta = sum(densities, Decimal("0")) / Decimal(len(densities))
+
+    selected: list[Job] = []
+    free_at = 0
+    for job in candidates:
+        duration = duration_fn(job)
+        start = max(free_at, _arrival(job))
+        finish = start + duration
+        if finish > _expiry(job, facts) or finish > _horizon(facts):
+            continue
+        density = value_fn(job) / Decimal(max(duration, 1))
+        if density < theta:
+            continue
+        free_at = finish
+        selected.append(job)
+
+    net = (
+        _tool_reference_net(selected, facts)
+        if tool_mediated
+        else _reference_net(selected, facts, Decimal("1.0"))
+    )
+    return ReferenceResult(net=net, selected_jobs=selected, relaxation=False)
+
+
+def joint_optimum_reference(jobs: list[Job], facts: TraceFacts) -> ReferenceResult:
+    """Approximate joint (model x schedule) optimum for tool-mediated runs (Task 13).
+
+    The omniscient reference fixes each job's value-maximising model and then
+    schedules; it never downgrades a job to a faster/cheaper model to fit more jobs.
+    With a mixed-difficulty market that trade-off is real, so this reference branches
+    over the model choice per job inside the schedule DP. It is always >= the
+    per-job-max reference (omniscient is this DP restricted to best-model-only), and
+    is labelled relaxation=True: an exact-ish bound for <=16 candidates, the same
+    upper-bound relaxation as omniscient above that scale.
+    """
+    if facts.delivery_mode != "tool_mediated":
+        # No tool/model choice in direct mode: nothing joint to optimise.
+        return omniscient_reference(jobs, facts)
+
+    candidates = [job for job in jobs if _arrival(job) < _horizon(facts) and _best_tool_value(job) > 0]
+    if not _business_stream(facts):
+        return ReferenceResult(net=_tool_reference_net(candidates, facts), selected_jobs=candidates)
+    if len(candidates) > 16:
+        selected = [job for job in candidates if _feasible_job(job, facts, _best_tool_duration(job))]
+        return ReferenceResult(net=_tool_reference_net(selected, facts), selected_jobs=selected, relaxation=True)
+
+    options = [_tool_model_options(job) for job in candidates]
+    horizon = _horizon(facts)
+
+    @lru_cache(maxsize=None)
+    def best(current_time: int, remaining: tuple[int, ...]) -> tuple[Decimal, tuple[int, ...]]:
+        best_value = Decimal("0")
+        best_path: tuple[int, ...] = ()
+        for index in remaining:
+            job = candidates[index]
+            arrival = _arrival(job)
+            expiry = _expiry(job, facts)
+            rest = tuple(item for item in remaining if item != index)
+            for value, duration in options[index]:
+                if value <= 0:
+                    continue
+                finish = max(current_time, arrival) + duration
+                if finish > expiry or finish > horizon:
+                    continue
+                tail_value, tail_path = best(finish, rest)
+                total = value + tail_value
+                if total > best_value:
+                    best_value = total
+                    best_path = (index,) + tail_path
+        return best_value, best_path
+
+    gross, path = best(0, tuple(range(len(candidates))))
+    selected = [candidates[index] for index in path]
+    expected_overhead = _expected_overhead(facts)
+    manipulated_jobs = sum(1 for job in selected if job.manipulation is not None)
+    minimal_tool_calls = _minimal_idle_calls(facts) + (3 * len(selected)) + manipulated_jobs
+    expected_tool_burn = Decimal(minimal_tool_calls) * facts.tool_call_cost
+    net = (gross - expected_overhead - expected_tool_burn).quantize(Decimal("0.01"))
+    return ReferenceResult(net=net, selected_jobs=selected, relaxation=True)
+
+
+def _tool_model_options(job: Job) -> list[tuple[Decimal, int]]:
+    """(expected_value, duration) for every delivery model, for the joint DP."""
+    menu = DeliveryMenu.load_default()
+    options: list[tuple[Decimal, int]] = []
+    for model in menu.public_models():
+        try:
+            pass_prob = Decimal(str(menu.pass_prob(job.type, model.name, job.internal_difficulty)))
+            duration = menu.duration(job.type, model.name, job.internal_difficulty)
+        except KeyError:
+            continue
+        options.append(((job.reservation_price * pass_prob) - model.price, duration))
+    return options
+
+
 def _reference_net(selected: list[Job], facts: TraceFacts, capability: Decimal) -> Decimal:
     gross_profit = sum(((job.reservation_price * capability) - job.est_cost for job in selected), Decimal("0"))
     expected_overhead = _expected_overhead(facts)

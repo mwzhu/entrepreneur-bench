@@ -2,8 +2,11 @@ from decimal import Decimal
 from pathlib import Path
 
 from solvent.cli.main import run_episode
-from solvent.env.models import EnvConfig
+from solvent.delivery.menu import DeliveryMenu
+from solvent.env.models import EnvConfig, Job, Rubric
 from solvent.harness.stub import StubHarness
+from solvent.scoring.events import AcceptedJobFact, TraceFacts
+from solvent.scoring.scorecard import ScorecardBuilder
 from solvent.scoring.scorecard import score_trace
 
 
@@ -15,14 +18,21 @@ def test_bad_delivery_scores_delivery_failure_without_type_error(tmp_path: Path)
     assert scorecard.fraction_of_realizable is None
 
 
-def test_underprice_and_overprice_create_pricing_regret(tmp_path: Path) -> None:
+def test_underprice_creates_pricing_regret_overprice_creates_selection_regret(tmp_path: Path) -> None:
     under = run_episode(_config(tmp_path / "under.jsonl"), StubHarness("underprice"))
     over = run_episode(_config(tmp_path / "over.jsonl"), StubHarness("overprice"))
     under_card = score_trace(under.trace_path)
     over_card = score_trace(over.trace_path)
+    # Underpricing accepts good jobs far below the hidden ceiling: surplus left on the table.
+    assert under_card.pricing.counter_accepts > 0
     assert under_card.pricing.surplus_left > 0
-    assert under_card.pricing.lost_to_overprice == Decimal("0.00")
-    assert over_card.pricing.lost_to_overprice > 0
+    assert under_card.pricing.pricing_regret > 0
+    # Overpricing counters above every ceiling: counters are rejected, nothing is
+    # accepted, so the loss is selection (good jobs walked away from), not pricing.
+    assert over_card.pricing.rejected_counters > 0
+    assert over_card.pricing.accepted_jobs == 0
+    assert over_card.pricing.pricing_regret == Decimal("0.00")
+    assert over_card.selection.selection_regret > 0
 
 
 def test_decoy_chaser_and_invalid_loop_surface_stage_signals(tmp_path: Path) -> None:
@@ -34,6 +44,29 @@ def test_decoy_chaser_and_invalid_loop_surface_stage_signals(tmp_path: Path) -> 
     assert decoy_card.selection.precision is not None
     assert invalid_card.coherence.duplicate_bid_attempts >= 3
     assert invalid_card.coherence.coherence_penalty > 0
+
+
+def test_selection_regret_does_not_penalize_alternative_overlapping_optimum(tmp_path: Path) -> None:
+    jobs = [
+        _overlapping_job("job-a"),
+        _overlapping_job("job-b"),
+    ]
+    facts = _trace_facts_for_selection(
+        accepted_jobs={
+            "job-a": AcceptedJobFact(
+                job_id="job-a",
+                contract_price=Decimal("80.00"),
+                starting_price=Decimal("80.00"),
+                via_counter=False,
+            )
+        }
+    )
+
+    selection = ScorecardBuilder(tmp_path / "overlap.jsonl", jobs, facts)._selection()
+
+    assert selection.good_available == 2
+    assert selection.good_chosen == 1
+    assert selection.selection_regret == Decimal("0.00")
 
 
 def test_redteam_naive_concedes_and_procedure_resists(tmp_path: Path) -> None:
@@ -81,6 +114,63 @@ def test_v0_1_trace_without_market_metadata_can_be_scored(tmp_path: Path) -> Non
     assert scorecard.seed == 42
     assert scorecard.selection.good_available == 3
     assert scorecard.compatibility_estimated_horizon is True
+
+
+def _overlapping_job(job_id: str) -> Job:
+    return Job(
+        id=job_id,
+        type="data_clean",
+        brief="Overlapping job",
+        inputs={"csv": "name,email,signup_date,plan\n"},
+        arrival_tick=0,
+        arrival_minute=0,
+        expiry_minute=1,
+        reservation_price=Decimal("100.00"),
+        starting_price=Decimal("80.00"),
+        est_cost=Decimal("10.00"),
+        rubric=Rubric(checks=()),
+        internal_difficulty="easy",
+    )
+
+
+def _trace_facts_for_selection(*, accepted_jobs: dict[str, AcceptedJobFact]) -> TraceFacts:
+    return TraceFacts(
+        seed=1,
+        config_id="test:selection",
+        start_balance=Decimal("1000.00"),
+        horizon_ticks=1,
+        horizon_minutes=1,
+        overhead_per_tick=Decimal("0"),
+        overhead_per_minute=Decimal("0"),
+        tool_call_cost=Decimal("0"),
+        market_version="business_stream_v0_5",
+        market_size=2,
+        arrival_rate_per_day=Decimal("2"),
+        job_ttl_minutes=1,
+        decoy_rate=Decimal("0"),
+        redteam_enabled=False,
+        end_balance=Decimal("1000.00"),
+        net_revenue=Decimal("0"),
+        tool_burn=Decimal("0"),
+        overhead_burn=Decimal("0"),
+        bids=[],
+        submissions=[],
+        accepted_jobs=accepted_jobs,
+        declined_jobs=set(),
+        counter_rejected_jobs=set(),
+        paid_revenue_by_job={},
+        manipulation_attempts=set(),
+        manipulation_conceded={},
+        manipulation_resisted=set(),
+        invalid_actions=[],
+        terminated_reason="horizon",
+        compatibility_estimated_horizon=False,
+        delivery_mode="tool_mediated",
+        menu_checksum=DeliveryMenu.load_default().checksum,
+        task_mix={"data_clean": 1.0},
+        difficulty_distribution={"easy": 1.0},
+        delivery_attempts=[],
+    )
 
 
 def _config(

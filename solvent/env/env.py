@@ -49,10 +49,13 @@ class Environment:
             difficulty_distribution=config.difficulty_distribution,
         )
         self.trace = TraceWriter(config.trace_path)
-        self.bid_jobs: set[str] = set()
         self.accepted_jobs: dict[str, AcceptedJob] = {}
+        self.countered_jobs: set[str] = set()
+        self.declined_jobs: set[str] = set()
+        self.counter_rejected_jobs: set[str] = set()
         self.pending_manipulations: dict[str, PendingManipulation] = {}
         self.submitted_jobs: set[str] = set()
+        self.memory: dict[str, str] = {}
         self.reputation = config.reputation_start
         self.terminated_reason: str | None = None
         self._summary: EpisodeSummary | None = None
@@ -149,6 +152,16 @@ class Environment:
         self._evaluate_termination()
         return payload
 
+    def _accept_job(self, job: Job, contract_price: Decimal, kind: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+        self.accepted_jobs[job.id] = AcceptedJob(job_id=job.id, contract_price=contract_price)
+        self._emit(kind, payload, Decimal("0"))
+        public_manipulation = None
+        if job.manipulation is not None:
+            self.pending_manipulations[job.id] = PendingManipulation(job_id=job.id, event=job.manipulation)
+            public_manipulation = job.manipulation.to_public()
+            self._emit("manipulation_attempt", {"job_id": job.id, **public_manipulation}, Decimal("0"))
+        return public_manipulation
+
     def bid(self, job_id: str, price: Decimal) -> dict[str, Any]:
         self._charge_tool_or_raise("bid", {"job_id": job_id, "price": price})
         try:
@@ -162,7 +175,7 @@ class Environment:
                 code="unknown_job",
                 payload={"job_id": job_id},
             )
-        if job_id in self.bid_jobs:
+        if job_id in self.accepted_jobs or job_id in self.declined_jobs or job_id in self.countered_jobs:
             self._invalid(
                 "bid",
                 f"job already has a final bid: {job_id}",
@@ -171,21 +184,143 @@ class Environment:
                 payload={"job_id": job_id},
             )
 
-        self.bid_jobs.add(job_id)
+        self.countered_jobs.add(job_id)
         self._emit("bid_made", {"job_id": job_id, "price": price}, self.config.tool_call_cost)
-        accepted = price <= job.reservation_price
-        public_manipulation = None
-        if accepted:
-            self.accepted_jobs[job_id] = AcceptedJob(job_id=job_id, contract_price=price)
-            self._emit("bid_accepted", {"job_id": job_id, "contract_price": price}, Decimal("0"))
-            if job.manipulation is not None:
-                self.pending_manipulations[job_id] = PendingManipulation(job_id=job_id, event=job.manipulation)
-                public_manipulation = job.manipulation.to_public()
-                self._emit("manipulation_attempt", {"job_id": job_id, **public_manipulation}, Decimal("0"))
-        else:
-            self._emit("bid_declined", {"job_id": job_id, "price": price}, Decimal("0"))
+        if price < job.starting_price:
+            public_manipulation = self._accept_job(
+                job,
+                contract_price=job.starting_price,
+                kind="job_accepted",
+                payload={
+                    "job_id": job_id,
+                    "contract_price": job.starting_price,
+                    "starting_price": job.starting_price,
+                    "requested_price": price,
+                    "counter_accepted": False,
+                    "normalized_from_below_floor": True,
+                },
+            )
+            self._evaluate_termination()
+            return {
+                "accepted": True,
+                "job_id": job_id,
+                "contract_price": job.starting_price,
+                "normalized_from_below_floor": True,
+                "manipulation": public_manipulation,
+            }
+        if price <= job.reservation_price:
+            public_manipulation = self._accept_job(
+                job,
+                contract_price=price,
+                kind="bid_accepted",
+                payload={
+                    "job_id": job_id,
+                    "contract_price": price,
+                    "counter_price": price,
+                    "starting_price": job.starting_price,
+                    "counter_accepted": True,
+                },
+            )
+            self._evaluate_termination()
+            return {"accepted": True, "job_id": job_id, "manipulation": public_manipulation}
+        self.counter_rejected_jobs.add(job_id)
+        self._emit(
+            "counter_rejected",
+            {"job_id": job_id, "counter_price": price, "starting_price": job.starting_price},
+            Decimal("0"),
+        )
         self._evaluate_termination()
-        return {"accepted": accepted, "job_id": job_id, "manipulation": public_manipulation}
+        return {
+            "accepted": False,
+            "job_id": job_id,
+            "counter_rejected": True,
+            "starting_price": job.starting_price,
+            "manipulation": None,
+        }
+
+    def accept(self, job_id: str) -> dict[str, Any]:
+        self._charge_tool_or_raise("accept", {"job_id": job_id})
+        try:
+            job = self._get_arrived_job(job_id)
+        except UnknownJobError:
+            self._invalid(
+                "accept",
+                f"unknown job id: {job_id}",
+                self.config.tool_call_cost,
+                UnknownJobError,
+                code="unknown_job",
+                payload={"job_id": job_id},
+            )
+        if job_id in self.accepted_jobs or job_id in self.declined_jobs:
+            self._invalid(
+                "accept",
+                f"job cannot be accepted: {job_id}",
+                self.config.tool_call_cost,
+                code="invalid_accept",
+                payload={"job_id": job_id},
+            )
+        if job_id in self.countered_jobs and job_id not in self.counter_rejected_jobs:
+            self._invalid(
+                "accept",
+                f"job cannot be accepted: {job_id}",
+                self.config.tool_call_cost,
+                code="invalid_accept",
+                payload={"job_id": job_id},
+            )
+        self.counter_rejected_jobs.discard(job_id)
+        public_manipulation = self._accept_job(
+            job,
+            contract_price=job.starting_price,
+            kind="job_accepted",
+            payload={
+                "job_id": job_id,
+                "contract_price": job.starting_price,
+                "starting_price": job.starting_price,
+                "counter_accepted": False,
+            },
+        )
+        self._evaluate_termination()
+        return {
+            "accepted": True,
+            "job_id": job_id,
+            "contract_price": job.starting_price,
+            "manipulation": public_manipulation,
+        }
+
+    def decline(self, job_id: str) -> dict[str, Any]:
+        self._charge_tool_or_raise("decline", {"job_id": job_id})
+        try:
+            self._get_arrived_job(job_id)
+        except UnknownJobError:
+            self._invalid(
+                "decline",
+                f"unknown job id: {job_id}",
+                self.config.tool_call_cost,
+                UnknownJobError,
+                code="unknown_job",
+                payload={"job_id": job_id},
+            )
+        if job_id in self.accepted_jobs or job_id in self.declined_jobs:
+            self._invalid(
+                "decline",
+                f"job cannot be declined: {job_id}",
+                self.config.tool_call_cost,
+                code="invalid_decline",
+                payload={"job_id": job_id},
+            )
+        if job_id in self.countered_jobs and job_id not in self.counter_rejected_jobs:
+            self._invalid(
+                "decline",
+                f"job cannot be declined: {job_id}",
+                self.config.tool_call_cost,
+                code="invalid_decline",
+                payload={"job_id": job_id},
+            )
+        self.declined_jobs.add(job_id)
+        self.counter_rejected_jobs.discard(job_id)
+        self._emit("job_declined", {"job_id": job_id}, Decimal("0"))
+        self._evaluate_termination()
+        return {"declined": True, "job_id": job_id}
 
     def submit(self, job_id: str, artifact: str) -> VerifyResult:
         self._charge_tool_or_raise("submit", {"job_id": job_id})
@@ -314,6 +449,35 @@ class Environment:
         self._emit("balance_checked", {"balance": self.ledger.balance}, self.config.tool_call_cost)
         self._evaluate_termination()
         return self.ledger.balance
+
+    def mem_write(self, key: str, value: str) -> dict[str, Any]:
+        self._charge_tool_or_raise("mem_write", {"key": key})
+        self.memory[key] = value
+        self._emit("memory_write", {"key": key, "value_size": len(value)}, self.config.tool_call_cost)
+        self._evaluate_termination()
+        return {"ok": True, "key": key}
+
+    def mem_read(self, key: str) -> dict[str, Any]:
+        self._charge_tool_or_raise("mem_read", {"key": key})
+        found = key in self.memory
+        self._emit("memory_read", {"key": key, "found": found}, self.config.tool_call_cost)
+        self._evaluate_termination()
+        return {"key": key, "value": self.memory.get(key)}
+
+    def mem_list(self) -> dict[str, Any]:
+        self._charge_tool_or_raise("mem_list")
+        keys = sorted(self.memory)
+        self._emit("memory_listed", {"keys": keys}, self.config.tool_call_cost)
+        self._evaluate_termination()
+        return {"keys": keys}
+
+    def mem_delete(self, key: str) -> dict[str, Any]:
+        self._charge_tool_or_raise("mem_delete", {"key": key})
+        existed = key in self.memory
+        self.memory.pop(key, None)
+        self._emit("memory_deleted", {"key": key, "existed": existed}, self.config.tool_call_cost)
+        self._evaluate_termination()
+        return {"ok": True, "key": key, "existed": existed}
 
     def list_in_progress(self) -> list[str]:
         self._charge_tool_or_raise("list_in_progress")
@@ -487,10 +651,26 @@ class Environment:
         return [
             job
             for job in self.market.available_jobs(self.clock.tick, business_time=self._business_time_mode())
-            if job.id not in self.bid_jobs
+            if job.id not in self.accepted_jobs
+            and job.id not in self.declined_jobs
+            and job.id not in self.countered_jobs
             and not self._job_expired(job)
             and self._job_allowed_by_reputation(job)
         ]
+
+    def awaiting_decision_jobs(self) -> list[Job]:
+        return [
+            job
+            for job in self.market.available_jobs(self.clock.tick, business_time=self._business_time_mode())
+            if job.id in self.counter_rejected_jobs
+            and job.id not in self.accepted_jobs
+            and job.id not in self.declined_jobs
+            and not self._job_expired(job)
+            and self._job_allowed_by_reputation(job)
+        ]
+
+    def _job_resolved(self, job_id: str) -> bool:
+        return job_id in self.accepted_jobs or job_id in self.declined_jobs or job_id in self.countered_jobs
 
     def next_event_time(self) -> int | None:
         if not self._business_time_mode():
@@ -500,9 +680,9 @@ class Environment:
         for job in self.market.all_jobs():
             arrival = self._job_arrival_time(job)
             expiry = self._job_expiry_time(job)
-            if job.id not in self.bid_jobs and arrival > now:
+            if not self._job_resolved(job.id) and arrival > now:
                 candidates.append(arrival)
-            if job.id not in self.bid_jobs and expiry is not None and expiry > now:
+            if not self._job_resolved(job.id) and expiry is not None and expiry > now:
                 candidates.append(expiry)
         candidates.append(self.clock.horizon)
         future = [candidate for candidate in candidates if candidate > now]

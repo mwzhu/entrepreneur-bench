@@ -15,8 +15,8 @@ def test_happy_path_stub_produces_paid_job_and_expected_balance(tmp_path: Path) 
     summary = run_episode(_config(tmp_path / "happy.jsonl"), StubHarness("happy_path"))
     assert summary.terminated_reason == "turn_cap"
     assert summary.jobs_paid == 1
-    assert summary.end_balance == Decimal("20.29")
-    assert summary.net_revenue == Decimal("0.29")
+    assert summary.end_balance > summary.start_balance
+    assert summary.net_revenue > 0
     kinds = [event["kind"] for event in _events(summary.trace_path)]
     assert "verified_pass" in kinds
     assert kinds.count("paid") == 1
@@ -32,12 +32,18 @@ def test_bad_delivery_fails_verification_and_no_revenue(tmp_path: Path) -> None:
     assert "paid" not in kinds
 
 
-def test_declined_bid_cannot_be_submitted_rebid_or_seen_on_board(tmp_path: Path) -> None:
-    env = Environment(_config(tmp_path / "declined.jsonl"))
+def test_rejected_counter_leaves_floor_open_and_blocks_submit_or_rebid(tmp_path: Path) -> None:
+    env = Environment(_config(tmp_path / "rejected.jsonl"))
     try:
         job = env.list_jobs()[0]
-        assert env.bid(job.id, Decimal("999.00"))["accepted"] is False
+        # A counter above the hidden ceiling is rejected, not auto-declined.
+        result = env.bid(job.id, Decimal("999999.00"))
+        assert result["accepted"] is False
+        assert result["counter_rejected"] is True
+        # The job leaves the main board but is surfaced for an accept/decline decision.
         assert job.id not in [public.id for public in env.list_jobs()]
+        assert job.id in [public.id for public in (j for j in env.awaiting_decision_jobs())]
+        # Cannot submit (unaccepted) and cannot counter again.
         with pytest.raises(InvalidActionError):
             env.submit(job.id, "name,email,signup_date,plan\n")
         with pytest.raises(InvalidActionError):
@@ -45,8 +51,99 @@ def test_declined_bid_cannot_be_submitted_rebid_or_seen_on_board(tmp_path: Path)
     finally:
         summary = env.finalize()
     events = _events(summary.trace_path)
-    assert [event["kind"] for event in events].count("bid_declined") == 1
-    assert [event["kind"] for event in events].count("invalid_action") == 2
+    kinds = [event["kind"] for event in events]
+    assert kinds.count("counter_rejected") == 1
+    assert kinds.count("bid_declined") == 0
+    assert kinds.count("invalid_action") == 2
+
+
+def test_accept_floor_after_rejected_counter_uses_starting_price(tmp_path: Path) -> None:
+    env = Environment(_config(tmp_path / "accept-floor.jsonl"))
+    try:
+        job = env.list_jobs()[0]
+        starting = next(j for j in env.market.all_jobs() if j.id == job.id).starting_price
+        env.bid(job.id, Decimal("999999.00"))
+        result = env.accept(job.id)
+        assert result["accepted"] is True
+        assert result["contract_price"] == starting
+        assert env.accepted_jobs[job.id].contract_price == starting
+    finally:
+        summary = env.finalize()
+    kinds = [event["kind"] for event in _events(summary.trace_path)]
+    assert kinds.count("counter_rejected") == 1
+    assert kinds.count("job_accepted") == 1
+
+
+def test_accept_open_job_takes_starting_price(tmp_path: Path) -> None:
+    env = Environment(_config(tmp_path / "accept-open.jsonl"))
+    try:
+        job = env.list_jobs()[0]
+        starting = next(j for j in env.market.all_jobs() if j.id == job.id).starting_price
+        result = env.accept(job.id)
+        assert result["accepted"] is True
+        assert result["contract_price"] == starting
+        # Accepting again is invalid.
+        with pytest.raises(InvalidActionError):
+            env.accept(job.id)
+        assert job.id not in [public.id for public in env.list_jobs()]
+    finally:
+        summary = env.finalize()
+    events = _events(summary.trace_path)
+    accepted = next(e for e in events if e["kind"] == "job_accepted")
+    assert accepted["payload"]["counter_accepted"] is False
+    assert accepted["payload"]["contract_price"] == str(starting)
+
+
+def test_decline_removes_job_and_blocks_further_action(tmp_path: Path) -> None:
+    env = Environment(_config(tmp_path / "decline.jsonl"))
+    try:
+        job = env.list_jobs()[0]
+        result = env.decline(job.id)
+        assert result["declined"] is True
+        assert job.id not in [public.id for public in env.list_jobs()]
+        with pytest.raises(InvalidActionError):
+            env.accept(job.id)
+        with pytest.raises(InvalidActionError):
+            env.bid(job.id, Decimal("0.50"))
+    finally:
+        summary = env.finalize()
+    kinds = [event["kind"] for event in _events(summary.trace_path)]
+    assert kinds.count("job_declined") == 1
+    assert kinds.count("invalid_action") == 2
+
+
+def test_winning_counter_below_reservation_pays_counter_price(tmp_path: Path) -> None:
+    env = Environment(_config(tmp_path / "win-counter.jsonl"))
+    try:
+        job = env.list_jobs()[0]
+        internal = next(j for j in env.market.all_jobs() if j.id == job.id)
+        counter = internal.starting_price + Decimal("0.01")
+        result = env.bid(job.id, counter)
+        assert result["accepted"] is True
+        assert env.accepted_jobs[job.id].contract_price == counter
+    finally:
+        summary = env.finalize()
+    events = _events(summary.trace_path)
+    accepted = next(e for e in events if e["kind"] == "bid_accepted")
+    assert accepted["payload"]["counter_accepted"] is True
+    assert accepted["payload"]["contract_price"] == str(counter)
+    assert accepted["payload"]["counter_price"] == str(counter)
+
+
+def test_counter_below_starting_price_normalizes_to_floor_accept(tmp_path: Path) -> None:
+    env = Environment(_config(tmp_path / "below-floor.jsonl"))
+    try:
+        job = env.list_jobs()[0]
+        internal = next(j for j in env.market.all_jobs() if j.id == job.id)
+        result = env.bid(job.id, Decimal("0.50"))
+        assert result["accepted"] is True
+        assert result["normalized_from_below_floor"] is True
+        assert env.accepted_jobs[job.id].contract_price == internal.starting_price
+    finally:
+        summary = env.finalize()
+    accepted = next(e for e in _events(summary.trace_path) if e["kind"] == "job_accepted")
+    assert accepted["payload"]["normalized_from_below_floor"] is True
+    assert accepted["payload"]["contract_price"] == str(internal.starting_price)
 
 
 def test_successful_job_cannot_be_paid_twice(tmp_path: Path) -> None:

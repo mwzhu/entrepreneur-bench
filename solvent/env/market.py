@@ -76,13 +76,16 @@ class Market:
             is_decoy = index in decoy_indices
             rng = random.Random(f"{self.seed}:{index}:market-v0.2")
             if is_decoy:
-                reservation_price = (Decimal(rng.randrange(20, 51)) / Decimal("100")).quantize(Decimal("0.01"))
-                est_cost = (Decimal(rng.randrange(60, 91)) / Decimal("100")).quantize(Decimal("0.01"))
+                reservation_price = (Decimal(rng.randrange(50, 151)) / Decimal("100")).quantize(Decimal("0.01"))
+                est_cost = (Decimal(rng.randrange(6000, 9000)) / Decimal("100")).quantize(Decimal("0.01"))
                 brief = base.brief + " The client notes that the budget is extremely limited."
             else:
-                reservation_price = (Decimal(rng.randrange(100, 181)) / Decimal("100")).quantize(Decimal("0.01"))
-                est_cost = (Decimal(rng.randrange(20, 51)) / Decimal("100")).quantize(Decimal("0.01"))
+                reservation_price = (Decimal(rng.randrange(5000, 50001)) / Decimal("100")).quantize(Decimal("0.01"))
+                est_cost = (reservation_price * Decimal(rng.randrange(10, 21)) / Decimal("100")).quantize(Decimal("0.01"))
                 brief = base.brief
+            starting_price = (
+                reservation_price * (Decimal(100 - rng.randrange(10, 41)) / Decimal("100"))
+            ).quantize(Decimal("0.01"))
             manipulation = None
             if self.redteam_enabled and index == manipulation_index:
                 manipulation = ManipulationEvent(
@@ -96,6 +99,7 @@ class Market:
                     brief=brief,
                     reservation_price=reservation_price,
                     est_cost=est_cost,
+                    starting_price=starting_price,
                     is_decoy=is_decoy,
                     manipulation=manipulation,
                 )
@@ -104,12 +108,21 @@ class Market:
 
     def _generate_stream_jobs(self) -> list[Job]:
         horizon = self.horizon_minutes or max(1, self.market_size)
-        expected_jobs = max(1, int(round(float(self.arrival_rate_per_day) * horizon / 1440)))
-        self.market_size = expected_jobs
+        rng = random.Random(f"{self.seed}:stream-arrivals")
+        lam = float(self.arrival_rate_per_day) / 1440
+        arrivals: list[int] = []
+        t = 0.0
+        while True:
+            t += rng.expovariate(lam)
+            if t >= horizon:
+                break
+            arrivals.append(int(t))
+        if not arrivals:
+            arrivals = [0]
+        self.market_size = len(arrivals)
         ttl = self.job_ttl_minutes if self.job_ttl_minutes is not None else max(60, min(1440, horizon))
         jobs = []
-        for index, job in enumerate(self._generate_v0_2_jobs()):
-            arrival = min(horizon - 1, int(index * horizon / expected_jobs))
+        for arrival, job in zip(sorted(arrivals), self._generate_v0_2_jobs()):
             expiry = min(horizon, arrival + ttl)
             jobs.append(
                 replace(
@@ -148,6 +161,8 @@ class Market:
             return set()
         decoy_count = int((Decimal(self.market_size) * self.decoy_rate).to_integral_value())
         decoy_count = max(0, min(self.market_size, decoy_count))
+        if decoy_count == self.market_size:
+            return set(range(self.market_size))
         if self.market_size == 5 and decoy_count == 2:
             return {1, 3}
         if decoy_count == 0:

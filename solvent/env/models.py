@@ -55,6 +55,7 @@ class JobPublic:
     brief: str
     inputs: dict[str, Any]
     arrival_tick: int
+    starting_price: Decimal = Decimal("0")
     arrival_minute: int | None = None
     expiry_minute: int | None = None
 
@@ -87,6 +88,7 @@ class Job:
     reservation_price: Decimal
     est_cost: Decimal
     rubric: Rubric
+    starting_price: Decimal = Decimal("0")
     is_decoy: bool = False
     manipulation: ManipulationEvent | None = None
     internal_difficulty: str = "easy"
@@ -100,6 +102,7 @@ class Job:
             brief=self.brief,
             inputs=dict(self.inputs),
             arrival_tick=self.arrival_tick,
+            starting_price=self.starting_price,
             arrival_minute=self.arrival_minute,
             expiry_minute=self.expiry_minute,
         )

@@ -1,0 +1,16 @@
+name: full_v06
+models: [minimax-m3:base, deepseek-v3.2:base]
+seeds: [140, 141, 142, 143]
+samples_per_seed: 1
+conditions: [redteam_off]
+horizon_minutes: 43200
+max_turns: 1600
+market: { task_mix: {data_clean: 0.5, extract: 0.5}, arrival_rate_per_day: 4.5, decoy_rate: 0.3, manipulation_rate: 0, difficulty_distribution: {easy: 0.4, med: 0.4, hard: 0.2} }
+context_policy: anchored
+ctx_window_tokens: 30000
+ablations: [base]
+caching: true
+temperature: 1.0
+budget_usd: 50
+cell_budget_headroom: 5.0
+parallelism: 9

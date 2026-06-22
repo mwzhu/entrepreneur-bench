@@ -12,6 +12,30 @@ class BidFact:
     job_id: str
     price: Decimal
     accepted: bool | None = None
+    # Negotiation terminal outcome for the counter mechanic (v0.6). `outcome` is one
+    # of: counter_accepted, counter_rejected, counter_rejected_then_floor,
+    # counter_rejected_then_declined. starting_price/counter_price/contract_price are
+    # filled from the acceptance / rejection events.
+    starting_price: Decimal | None = None
+    counter_price: Decimal | None = None
+    contract_price: Decimal | None = None
+    outcome: str | None = None
+
+
+@dataclass(frozen=True)
+class AcceptedJobFact:
+    """A job the agent actually took, built from terminal acceptance events.
+
+    Covers both floor accepts (`job_accepted`, via_counter=False) and winning
+    counters (`bid_accepted`, via_counter=True). `contract_price` is the resolved
+    revenue the job pays on a successful delivery, available even when delivery
+    later fails (no `paid` event is emitted in that case).
+    """
+
+    job_id: str
+    contract_price: Decimal
+    starting_price: Decimal
+    via_counter: bool
 
 
 @dataclass(frozen=True)
@@ -55,6 +79,9 @@ class TraceFacts:
     overhead_burn: Decimal
     bids: list[BidFact]
     submissions: list[SubmissionFact]
+    accepted_jobs: dict[str, "AcceptedJobFact"]
+    declined_jobs: set[str]
+    counter_rejected_jobs: set[str]
     paid_revenue_by_job: dict[str, Decimal]
     manipulation_attempts: set[str]
     manipulation_conceded: dict[str, Decimal]
@@ -77,6 +104,10 @@ class TraceFacts:
     corpus_schema_version: str = "none"
     menu_schema_version: str = "solvent_delivery_menu_v0_4"
     delivery_attempts: list[DeliveryAttemptFact] | None = None
+    # Tick the episode actually reached (max event tick). Equals horizon_ticks for a
+    # full run; lower when the agent stopped early (turn/budget cap, insolvency). Used
+    # to compute truncation-free "realized horizon" reference optima.
+    realized_horizon_ticks: int = 0
 
 
 def load_events(trace_path: Path) -> list[dict[str, Any]]:
@@ -98,6 +129,7 @@ def facts_from_events(events: list[dict[str, Any]]) -> TraceFacts:
     redteam_enabled = bool(start_payload.get("redteam_enabled", False))
     horizon_ticks = int(start_payload.get("horizon_ticks", events[-1]["tick"]))
     horizon_minutes = _optional_int(start_payload.get("horizon_minutes"))
+    realized_horizon_ticks = min(horizon_ticks, max((int(event.get("tick", 0)) for event in events), default=horizon_ticks))
     compatibility_estimated_horizon = not metadata_v0_2
     overhead_per_tick = _infer_overhead(events, start_payload)
     overhead_per_minute = _optional_decimal(start_payload.get("overhead_per_minute"))
@@ -120,6 +152,9 @@ def facts_from_events(events: list[dict[str, Any]]) -> TraceFacts:
     submissions: list[SubmissionFact] = []
     delivery_attempts: list[DeliveryAttemptFact] = []
     pending_deliveries: dict[str, dict[str, Any]] = {}
+    accepted_jobs: dict[str, AcceptedJobFact] = {}
+    declined_jobs: set[str] = set()
+    counter_rejected_jobs: set[str] = set()
     paid_revenue_by_job: dict[str, Decimal] = {}
     manipulation_attempts: set[str] = set()
     manipulation_conceded: dict[str, Decimal] = {}
@@ -148,9 +183,66 @@ def facts_from_events(events: list[dict[str, Any]]) -> TraceFacts:
             bids.append(bid)
             bids_by_job[bid.job_id] = bid
         elif kind == "bid_accepted":
-            if payload["job_id"] in bids_by_job:
-                bids_by_job[payload["job_id"]].accepted = True
+            job_id = str(payload["job_id"])
+            contract_price = _decimal(payload.get("contract_price", payload.get("counter_price", "0")))
+            starting_price = _optional_decimal(payload.get("starting_price"))
+            if starting_price is None:
+                starting_price = contract_price
+            accepted_jobs[job_id] = AcceptedJobFact(
+                job_id=job_id,
+                contract_price=contract_price,
+                starting_price=starting_price,
+                via_counter=bool(payload.get("counter_accepted", True)),
+            )
+            counter_rejected_jobs.discard(job_id)
+            declined_jobs.discard(job_id)
+            bid = bids_by_job.get(job_id)
+            if bid is not None:
+                bid.accepted = True
+                bid.contract_price = contract_price
+                bid.counter_price = _optional_decimal(payload.get("counter_price"))
+                bid.starting_price = starting_price
+                bid.outcome = "counter_accepted"
+        elif kind == "job_accepted":
+            job_id = str(payload["job_id"])
+            contract_price = _decimal(payload.get("contract_price", payload.get("starting_price", "0")))
+            starting_price = _optional_decimal(payload.get("starting_price"))
+            if starting_price is None:
+                starting_price = contract_price
+            accepted_jobs[job_id] = AcceptedJobFact(
+                job_id=job_id,
+                contract_price=contract_price,
+                starting_price=starting_price,
+                via_counter=False,
+            )
+            had_rejected_counter = job_id in counter_rejected_jobs
+            counter_rejected_jobs.discard(job_id)
+            declined_jobs.discard(job_id)
+            bid = bids_by_job.get(job_id)
+            if bid is not None:
+                bid.accepted = True
+                bid.contract_price = contract_price
+                bid.starting_price = starting_price
+                bid.outcome = "counter_rejected_then_floor" if had_rejected_counter else "floor_accepted"
+        elif kind == "counter_rejected":
+            job_id = str(payload["job_id"])
+            counter_rejected_jobs.add(job_id)
+            bid = bids_by_job.get(job_id)
+            if bid is not None:
+                bid.accepted = False
+                bid.counter_price = _optional_decimal(payload.get("counter_price"))
+                bid.starting_price = _optional_decimal(payload.get("starting_price"))
+                bid.outcome = "counter_rejected"
+        elif kind == "job_declined":
+            job_id = str(payload["job_id"])
+            declined_jobs.add(job_id)
+            if job_id in counter_rejected_jobs:
+                counter_rejected_jobs.discard(job_id)
+                bid = bids_by_job.get(job_id)
+                if bid is not None:
+                    bid.outcome = "counter_rejected_then_declined"
         elif kind == "bid_declined":
+            # Legacy (pre-v0.6) one-shot decline; treat as a rejected attempt.
             if payload["job_id"] in bids_by_job:
                 bids_by_job[payload["job_id"]].accepted = False
         elif kind in {"verified_pass", "verified_fail"}:
@@ -215,6 +307,7 @@ def facts_from_events(events: list[dict[str, Any]]) -> TraceFacts:
         start_balance=start_balance,
         horizon_ticks=horizon_ticks,
         horizon_minutes=horizon_minutes,
+        realized_horizon_ticks=realized_horizon_ticks,
         overhead_per_tick=overhead_per_tick,
         overhead_per_minute=overhead_per_minute,
         tool_call_cost=tool_call_cost,
@@ -230,6 +323,9 @@ def facts_from_events(events: list[dict[str, Any]]) -> TraceFacts:
         overhead_burn=overhead_burn,
         bids=bids,
         submissions=submissions,
+        accepted_jobs=accepted_jobs,
+        declined_jobs=declined_jobs,
+        counter_rejected_jobs=counter_rejected_jobs,
         paid_revenue_by_job=paid_revenue_by_job,
         manipulation_attempts=manipulation_attempts,
         manipulation_conceded=manipulation_conceded,

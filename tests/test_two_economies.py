@@ -27,21 +27,17 @@ def test_business_balance_debits_delivery_price_not_brain_cost(tmp_path: Path) -
     brain_cost = sum(_decimal(event["payload"]["cost"]) for event in events if event["kind"] == "brain_metered")
     assert brain_cost > Decimal("0")
     assert all(event["burn_delta"] == "0" for event in events if event["kind"] == "brain_metered")
-    assert any(event["kind"] == "tool_price_charged" and event["burn_delta"] == "0.45" for event in events)
+    assert any(event["kind"] == "tool_price_charged" and event["burn_delta"] == "45.00" for event in events)
 
-    expected_balance = (
-        Decimal("20.00")
-        - Decimal("0.45")
-        - Decimal("0.05")
-        + Decimal("0.50")
-    )
+    paid_revenue = next(_decimal(event["payload"]["revenue"]) for event in events if event["kind"] == "paid")
+    expected_balance = Decimal("1000.00") - Decimal("45.00") - Decimal("0.05") + paid_revenue
     assert summary.end_balance == expected_balance
 
     scorecard = score_trace(trace_path)
     assert scorecard.compute is not None
     assert scorecard.compute.brain_cost == brain_cost
     assert scorecard.tool_selection is not None
-    assert scorecard.tool_selection.tool_price_charged == Decimal("0.45")
+    assert scorecard.tool_selection.tool_price_charged == Decimal("45.00")
 
 
 def test_llm_config_uses_zero_flat_tool_call_cost(tmp_path: Path) -> None:
@@ -58,7 +54,7 @@ def _config(trace_path: Path) -> EnvConfig:
     return EnvConfig(
         seed=42,
         config_id="claude-opus-4-8:base",
-        start_balance=Decimal("20.00"),
+        start_balance=Decimal("1000.00"),
         horizon_ticks=1,
         overhead_per_tick=Decimal("0.05"),
         tool_call_cost=Decimal("0"),

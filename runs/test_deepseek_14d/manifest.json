@@ -1,0 +1,25 @@
+{
+  "created_or_updated_at": "2026-06-22T02:47:32.638278+00:00",
+  "estimate": {
+    "budget_usd": "20.000000",
+    "models": [
+      {
+        "cache_read_tokens_per_cell": 7266000,
+        "cells": 3,
+        "cost_per_cell": "1.098619",
+        "input_tokens_per_cell": 3114000,
+        "model": "deepseek-v3.2:base",
+        "output_tokens_per_cell": 55360,
+        "total_cost": "3.295857",
+        "turns_per_cell": 346
+      }
+    ],
+    "name": "test_deepseek_14d",
+    "over_budget": false,
+    "total_cells": 3,
+    "total_cost": "3.295857"
+  },
+  "name": "test_deepseek_14d",
+  "run_dir": "runs/test_deepseek_14d",
+  "schema_version": "solvent_experiment_state_v0_5"
+}

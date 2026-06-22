@@ -312,14 +312,16 @@
   function renderScorecard(scorecard) {
     const rows = [
       ["Net revenue", scorecard.net_revenue],
-      [scorecard.omniscient_reference_relaxation ? "Fraction upper bound" : "Fraction optimal", fmt(scorecard.fraction_of_omniscient_optimal)],
+      ["Expected net revenue", scorecard.expected_net_revenue],
+      [scorecard.omniscient_reference_relaxation ? "Fraction optimal (expected, upper bound)" : "Fraction optimal (expected)", fmt(scorecard.fraction_of_omniscient_optimal_expected)],
+      ["Fraction optimal (realized)", fmt(scorecard.fraction_of_omniscient_optimal)],
+      ["Fraction of threshold policy", fmt(scorecard.fraction_of_threshold_policy)],
       ["Selection precision", fmt(scorecard.selection.precision)],
       ["Selection regret", scorecard.selection.selection_regret],
       ["Pricing regret", scorecard.pricing.pricing_regret],
       ["Delivery pass rate", fmt(scorecard.delivery.pass_rate)],
       ["Tool-selection regret", scorecard.tool_selection && scorecard.tool_selection.oracle_tool_regret],
       ["Brain compute cost", scorecard.compute && scorecard.compute.brain_cost],
-      ["Manipulation conceded", scorecard.support.conceded_value],
       ["Coherence penalty", scorecard.coherence.coherence_penalty],
     ];
     document.getElementById("scorecard").innerHTML =
@@ -395,16 +397,20 @@
       { key: "model", label: "Model", render: (row) => escapeHtml(row.model) },
       { key: "net_revenue", label: "Net revenue", render: (row) => formatMetric(row.net_revenue, { includeMin: true }) },
       {
-        key: "fraction_of_omniscient_optimal",
-        label: "Optimal",
-        render: (row) => formatMetric(row.fraction_of_omniscient_optimal) + (row.omniscient_reference_relaxation ? " <span class=\"muted\">upper bound</span>" : ""),
+        key: "fraction_of_omniscient_optimal_expected",
+        label: "Optimal (expected)",
+        render: (row) => formatMetric(row.fraction_of_omniscient_optimal_expected) + (row.omniscient_reference_relaxation ? " <span class=\"muted\">upper bound</span>" : ""),
       },
+      {
+        key: "fraction_of_omniscient_optimal",
+        label: "Optimal (realized)",
+        render: (row) => formatMetric(row.fraction_of_omniscient_optimal),
+      },
+      { key: "fraction_of_threshold_policy", label: "vs threshold", render: (row) => formatMetric(row.fraction_of_threshold_policy) },
       { key: "selection_regret", label: "Selection", render: (row) => formatMetric(row.selection_regret) },
       { key: "pricing_regret", label: "Pricing", render: (row) => formatMetric(row.pricing_regret) },
       { key: "delivery_pass_rate", label: "Delivery", render: (row) => formatMetric(row.delivery_pass_rate) },
       { key: "tool_selection_regret", label: "Tool", render: (row) => formatMetric(row.tool_selection_regret) },
-      { key: "support_conceded_value", label: "Support", render: (row) => formatMetric(row.support_conceded_value) },
-      { key: "manipulation_resistance_loss", label: "Manipulation", render: (row) => formatMetric(row.manipulation_resistance_loss) },
       { key: "coherence_penalty", label: "Coherence", render: (row) => formatMetric(row.coherence_penalty) },
       { key: "jobs_delivered", label: "Jobs", render: (row) => formatMetric(row.jobs_delivered) },
       { key: "days_until_insolvent", label: "Days", render: (row) => formatMetric(row.days_until_insolvent) },
@@ -684,7 +690,10 @@
     const configs = Object.keys(summary.configs || {});
     const metrics = [
       "net_revenue",
+      "fraction_of_omniscient_optimal_expected",
       "fraction_of_omniscient_optimal",
+      "fraction_of_joint_optimum",
+      "fraction_of_threshold_policy",
       "delivery_pass_rate",
       "brain_compute_cost",
       "brain_cache_hit_rate",
@@ -692,9 +701,7 @@
       "tool_selection_regret",
       "pricing_regret",
       "selection_regret",
-      "support_conceded_value",
       "coherence_penalty",
-      "manipulation_resistance_loss",
     ];
     const labels = summary.metric_labels || {};
     const table = document.getElementById("compare-table");

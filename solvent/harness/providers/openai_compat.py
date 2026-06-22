@@ -25,6 +25,8 @@ OPENAI_COMPAT_PROVIDERS: dict[str, OpenAICompatProvider] = {
     "moonshot": OpenAICompatProvider("https://api.moonshot.ai/v1", "MOONSHOT_API_KEY", "moonshotai/kimi-k2.6"),
     "glm": OpenAICompatProvider("https://open.bigmodel.cn/api/paas/v4", "ZHIPU_API_KEY", "z-ai/glm-5"),
     "minimax": OpenAICompatProvider("https://api.minimax.io/v1", "MINIMAX_API_KEY", "minimax/minimax-m3"),
+    "grok": OpenAICompatProvider("https://api.x.ai/v1", "XAI_API_KEY", "x-ai/grok-4.1-fast"),
+    "deepseek": OpenAICompatProvider("https://api.deepseek.com/v1", "DEEPSEEK_API_KEY", "deepseek/deepseek-v3.2"),
 }
 
 OPENROUTER_API_KEY_ENV = "OPENROUTER_API_KEY"
@@ -73,6 +75,13 @@ class OpenAICompatClient:
             # OpenRouter normalizes reasoning across providers behind this flag;
             # direct reasoning models (e.g. MiniMax) return reasoning_content by default.
             payload["reasoning"] = {"enabled": True}
+        if self._reasoning_is_requestable():
+            # OpenRouter load-balances across upstream hosts; the default pick is often
+            # a slow and/or non-caching provider (measured ~22-32 tok/s, 0% cache).
+            # Sorting by throughput lands on a fast host that also serves the prefix
+            # cache (~55 tok/s, ~85% cache), which is what makes long runs both
+            # affordable and fast. No-op for non-OpenRouter providers.
+            payload["provider"] = {"sort": "throughput"}
         http_request = urllib.request.Request(
             f"{self.base_url}/chat/completions",
             data=json.dumps(payload).encode("utf-8"),

@@ -1,0 +1,15 @@
+name: test_deepseek_14d
+models: [deepseek-v3.2:base]
+seeds: [140, 141, 142]
+samples_per_seed: 1
+conditions: [redteam_off]
+horizon_minutes: 20160
+max_turns: 1000
+market: { task_mix: {data_clean: 0.5, extract: 0.5}, arrival_rate_per_day: 4.5, decoy_rate: 0.3, manipulation_rate: 0, difficulty_distribution: {easy: 0.4, med: 0.4, hard: 0.2} }
+context_policy: anchored
+ctx_window_tokens: 30000
+ablations: [base]
+caching: true
+temperature: 1.0
+budget_usd: 20
+parallelism: 9

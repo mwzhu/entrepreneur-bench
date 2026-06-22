@@ -1,0 +1,35 @@
+{
+  "created_or_updated_at": "2026-06-22T06:25:03.240013+00:00",
+  "estimate": {
+    "budget_usd": "50.000000",
+    "models": [
+      {
+        "cache_read_tokens_per_cell": 15582000,
+        "cells": 4,
+        "cost_per_cell": "3.080784",
+        "input_tokens_per_cell": 6678000,
+        "model": "minimax-m3:base",
+        "output_tokens_per_cell": 118720,
+        "total_cost": "12.323136",
+        "turns_per_cell": 742
+      },
+      {
+        "cache_read_tokens_per_cell": 15582000,
+        "cells": 4,
+        "cost_per_cell": "2.355998",
+        "input_tokens_per_cell": 6678000,
+        "model": "deepseek-v3.2:base",
+        "output_tokens_per_cell": 118720,
+        "total_cost": "9.423992",
+        "turns_per_cell": 742
+      }
+    ],
+    "name": "full_v06",
+    "over_budget": false,
+    "total_cells": 8,
+    "total_cost": "21.747128"
+  },
+  "name": "full_v06",
+  "run_dir": "runs/full_v06",
+  "schema_version": "solvent_experiment_state_v0_5"
+}

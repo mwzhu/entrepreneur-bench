@@ -37,9 +37,22 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
         ["job_id", "question"],
     ),
     "bid": _schema(
-        "Submit a final bid for a job.",
-        {"job_id": _string("Public job id."), "price": _string("Bid price as a decimal string, e.g. 1.25.")},
+        "Make a ONE-SHOT counter-offer on a job: ask above its visible starting_price, up to the "
+        "client's hidden ceiling. If your counter is at or below the ceiling it is accepted at your "
+        "price; if it is rejected the starting_price floor stays open in awaiting_decision for you to "
+        "accept or decline. You may counter a job only once.",
+        {"job_id": _string("Public job id."), "price": _string("Counter price as a decimal string, e.g. 120.00.")},
         ["job_id", "price"],
+    ),
+    "accept": _schema(
+        "Accept a job at its posted starting_price (no counter).",
+        {"job_id": _string("Public job id.")},
+        ["job_id"],
+    ),
+    "decline": _schema(
+        "Permanently decline a job (e.g. a decoy or after a rejected counter).",
+        {"job_id": _string("Public job id.")},
+        ["job_id"],
     ),
     "submit": _schema(
         "Submit an artifact in direct-delivery mode.",
@@ -62,8 +75,26 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
         {"job_id": _string("Accepted job id."), "model": _string("Delivery model name from list_models.")},
         ["job_id", "model"],
     ),
-    "end_tick": _schema("Advance the business clock by one tick."),
+    "end_tick": _schema(
+        "Advance business time. In business-time episodes, this jumps to the next arrival, expiry, or horizon."
+    ),
     "advance_to_next_event": _schema("Advance the business-time clock to the next arrival, expiry, or horizon."),
+    "mem_write": _schema(
+        "Save a note to your persistent notebook under a key (e.g. a job_id). Overwrites.",
+        {"key": _string("Notebook key, e.g. a job_id."), "value": _string("Note text to store.")},
+        ["key", "value"],
+    ),
+    "mem_read": _schema(
+        "Read a notebook note by key.",
+        {"key": _string("Notebook key to read.")},
+        ["key"],
+    ),
+    "mem_list": _schema("List all notebook keys."),
+    "mem_delete": _schema(
+        "Delete a notebook note by key.",
+        {"key": _string("Notebook key to delete.")},
+        ["key"],
+    ),
 }
 
 
@@ -89,6 +120,7 @@ class ToolAdapter:
 
     def observe(self) -> dict[str, Any]:
         jobs = [job.to_public() for job in self.env.available_jobs()]
+        awaiting_decision = [job.to_public() for job in self.env.awaiting_decision_jobs()]
         models = [
             {
                 "name": model.name,
@@ -109,6 +141,7 @@ class ToolAdapter:
                 "balance": self.env.ledger.balance,
                 "terminated": self.env.terminated(),
                 "available_jobs": jobs,
+                "awaiting_decision": awaiting_decision,
                 "delivery_models": models if self.env.config.delivery_mode == "tool_mediated" else [],
                 "in_progress": [
                     job_id
@@ -175,6 +208,10 @@ class ToolAdapter:
             return self.env.clarify(str(args["job_id"]), str(args["question"]))
         if name == "bid":
             return self.env.bid(str(args["job_id"]), Decimal(str(args["price"])))
+        if name == "accept":
+            return self.env.accept(str(args["job_id"]))
+        if name == "decline":
+            return self.env.decline(str(args["job_id"]))
         if name == "submit":
             return self.env.submit(str(args["job_id"]), str(args["artifact"]))
         if name == "respond":
@@ -191,6 +228,14 @@ class ToolAdapter:
             return self.env.end_tick()
         if name == "advance_to_next_event":
             return self.env.advance_to_next_event()
+        if name == "mem_write":
+            return self.env.mem_write(str(args["key"]), str(args["value"]))
+        if name == "mem_read":
+            return self.env.mem_read(str(args["key"]))
+        if name == "mem_list":
+            return self.env.mem_list()
+        if name == "mem_delete":
+            return self.env.mem_delete(str(args["key"]))
         raise InvalidActionError(f"unknown tool: {name}")
 
     def _emit_adapter_invalid(self, payload: dict[str, Any]) -> None:

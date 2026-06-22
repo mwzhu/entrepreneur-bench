@@ -1,0 +1,155 @@
+{
+  "actual_spend": "3.312343",
+  "cells": [
+    {
+      "actual_cost": "1.099991",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "deepseek-v3.2-base-base-seed-140-sample-0-redteam_off-1dc1e706a7",
+        "condition": "redteam_off",
+        "config_id": "deepseek-v3.2:base",
+        "model": "deepseek-v3.2:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 140
+      },
+      "error": "cell budget exceeded: 1.099991 > 1.098619",
+      "estimated_cost": "1.098619",
+      "finished_at": "2026-06-22T02:44:23.965269+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "deepseek-v3.2:base",
+        "context_policy": "sliding_window",
+        "ctx_window_tokens": 30000,
+        "horizon_minutes": 20160,
+        "market": {
+          "arrival_rate_per_day": 4.5,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.0,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "23a8f2cfc7f6af7acc69f6f048a8b876964a046e8c8dc7e831036962f28d48f0",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "deepseek-v3.2",
+        "model_config": "deepseek-v3.2:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 140,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/test_deepseek_14d/traces/deepseek-v3.2-base-base-seed-140-sample-0-redteam_off-1dc1e706a7.scorecard.json",
+      "started_at": "2026-06-22T02:22:52.020549+00:00",
+      "status": "failed_budget",
+      "trace_path": "runs/test_deepseek_14d/traces/deepseek-v3.2-base-base-seed-140-sample-0-redteam_off-1dc1e706a7.jsonl"
+    },
+    {
+      "actual_cost": "1.102332",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "deepseek-v3.2-base-base-seed-141-sample-0-redteam_off-53d0bad474",
+        "condition": "redteam_off",
+        "config_id": "deepseek-v3.2:base",
+        "model": "deepseek-v3.2:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 141
+      },
+      "error": "cell budget exceeded: 1.102332 > 1.098619",
+      "estimated_cost": "1.098619",
+      "finished_at": "2026-06-22T02:45:08.880566+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "deepseek-v3.2:base",
+        "context_policy": "sliding_window",
+        "ctx_window_tokens": 30000,
+        "horizon_minutes": 20160,
+        "market": {
+          "arrival_rate_per_day": 4.5,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.0,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "23a8f2cfc7f6af7acc69f6f048a8b876964a046e8c8dc7e831036962f28d48f0",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "deepseek-v3.2",
+        "model_config": "deepseek-v3.2:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 141,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/test_deepseek_14d/traces/deepseek-v3.2-base-base-seed-141-sample-0-redteam_off-53d0bad474.scorecard.json",
+      "started_at": "2026-06-22T02:22:52.021397+00:00",
+      "status": "failed_budget",
+      "trace_path": "runs/test_deepseek_14d/traces/deepseek-v3.2-base-base-seed-141-sample-0-redteam_off-53d0bad474.jsonl"
+    },
+    {
+      "actual_cost": "1.110020",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "deepseek-v3.2-base-base-seed-142-sample-0-redteam_off-2208a4835f",
+        "condition": "redteam_off",
+        "config_id": "deepseek-v3.2:base",
+        "model": "deepseek-v3.2:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 142
+      },
+      "error": "cell budget exceeded: 1.110020 > 1.098619",
+      "estimated_cost": "1.098619",
+      "finished_at": "2026-06-22T02:47:32.638257+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "deepseek-v3.2:base",
+        "context_policy": "sliding_window",
+        "ctx_window_tokens": 30000,
+        "horizon_minutes": 20160,
+        "market": {
+          "arrival_rate_per_day": 4.5,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.0,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "23a8f2cfc7f6af7acc69f6f048a8b876964a046e8c8dc7e831036962f28d48f0",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "deepseek-v3.2",
+        "model_config": "deepseek-v3.2:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 142,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/test_deepseek_14d/traces/deepseek-v3.2-base-base-seed-142-sample-0-redteam_off-2208a4835f.scorecard.json",
+      "started_at": "2026-06-22T02:22:52.028296+00:00",
+      "status": "failed_budget",
+      "trace_path": "runs/test_deepseek_14d/traces/deepseek-v3.2-base-base-seed-142-sample-0-redteam_off-2208a4835f.jsonl"
+    }
+  ],
+  "name": "test_deepseek_14d",
+  "reserved_spend": "0",
+  "schema_version": "solvent_experiment_state_v0_5"
+}

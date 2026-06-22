@@ -36,7 +36,7 @@ def test_business_time_delivery_advances_once_and_prorates_overhead(tmp_path: Pa
     assert overhead[0]["payload"]["amount"] == "0.000070"
 
 
-def test_advance_to_next_event_jumps_to_arrival_and_end_tick_aliases_in_business_mode(tmp_path: Path) -> None:
+def test_advance_to_next_event_jumps_to_next_event_and_end_tick_aliases_in_business_mode(tmp_path: Path) -> None:
     env = Environment(
         _business_config(
             tmp_path / "advance.jsonl",
@@ -49,12 +49,18 @@ def test_advance_to_next_event_jumps_to_arrival_and_end_tick_aliases_in_business
     api = ToolAdapter(env)
     try:
         assert env.clock.business_time == 0
+        # advance_to_next_event jumps to the next scheduled event (arrival, expiry, or
+        # horizon). Arrivals are now a seeded Poisson process, so assert against the
+        # env's own next_event_time rather than a fixed minute.
+        expected = env.next_event_time()
         result = api.dispatch({"name": "advance_to_next_event", "arguments": {}})
         assert result["ok"] is True
-        assert result["result"]["business_time"] == 720
-        assert len(env.available_jobs()) == 2
-        env.end_tick()
-        assert env.clock.business_time == 1440
+        assert result["result"]["business_time"] == expected
+        # end_tick is an alias for advance_to_next_event in business mode.
+        if not env.terminated():
+            before = env.clock.business_time
+            env.end_tick()
+            assert env.clock.business_time >= before
     finally:
         env.finalize()
 

@@ -18,11 +18,23 @@ class SelectionSignal:
 
 @dataclass(frozen=True)
 class PricingSignal:
+    """Counter-offer pricing quality (v0.6).
+
+    Under the starting-price / one-shot-counter mechanic the optimal play is to
+    counter exactly at the hidden reservation, capturing the full surplus. Regret
+    is the surplus left on the table on good jobs the agent actually took, whether
+    it accepted the floor (forfeiting reservation - starting_price) or countered
+    below the ceiling (forfeiting reservation - counter). Walking away from a good
+    job after a rejected counter is a selection loss, not a pricing one, so it is
+    not counted here.
+    """
+
     accepted_jobs: int
-    declined_good_jobs: int
+    floor_accepts: int
+    counter_accepts: int
+    rejected_counters: int
     average_price_ratio: float | None
     surplus_left: Decimal
-    lost_to_overprice: Decimal
     pricing_regret: Decimal
 
 
@@ -97,6 +109,26 @@ class Scorecard:
     menu_version: str = "menu_v0_4"
     menu_checksum: str = ""
     seed_split: str = "ad_hoc"
+    threshold_policy_reference_net: Decimal = Decimal("0")
+    fraction_of_threshold_policy: float | None = None
+    # Expected-value (control-variate) scoring — removes delivery-luck variance by
+    # crediting contract_price * pass_prob instead of the realized 0/1 (Task 8).
+    expected_net_revenue: Decimal = Decimal("0")
+    fraction_of_omniscient_optimal_expected: float | None = None
+    fraction_of_realizable_expected: float | None = None
+    # Approximate joint model x schedule optimum (Task 13); relaxation-labelled.
+    joint_optimum_reference_net: Decimal = Decimal("0")
+    joint_optimum_reference_relaxation: bool = False
+    fraction_of_joint_optimum: float | None = None
+    # Realized-horizon scoring — reference optimum over only the jobs reachable before
+    # the agent actually stopped, so capability metrics aren't truncation-confounded.
+    # Equals the full-horizon optimum when the run reached the horizon.
+    horizon_ticks: int = 0
+    realized_horizon_ticks: int = 0
+    omniscient_optimal_net_realized: Decimal = Decimal("0")
+    omniscient_realized_relaxation: bool = False
+    fraction_of_omniscient_optimal_realized: float | None = None
+    fraction_of_omniscient_optimal_realized_expected: float | None = None
 
 
 @dataclass(frozen=True)

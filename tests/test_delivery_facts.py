@@ -29,16 +29,17 @@ def test_deliver_path_normalizes_into_delivery_attempt_fact(tmp_path: Path) -> N
     attempt = (facts.delivery_attempts or [])[0]
     assert attempt.mode == "tool_mediated"
     assert attempt.model == "tool-pro"
-    assert attempt.price_charged == Decimal("0.45")
+    assert attempt.price_charged == Decimal("45.00")
     assert attempt.attempt_index == 0
 
     scorecard = score_trace(summary.trace_path)
     assert scorecard.delivery.submitted_jobs == 1
     assert scorecard.delivery.passed_jobs == 1
     assert scorecard.coherence.dropped_jobs == 0
-    assert scorecard.gross_score == Decimal("1.65")
+    # gross_score = dc-42-0 reservation_price * pass(1.0) under the rescaled economy.
+    assert scorecard.gross_score == Decimal("384.68")
     assert scorecard.tool_selection is not None
-    assert scorecard.tool_selection.tool_price_charged == Decimal("0.45")
+    assert scorecard.tool_selection.tool_price_charged == Decimal("45.00")
     assert scorecard.compute is not None
     assert scorecard.compute.brain_cost == Decimal("0")
 
@@ -117,7 +118,7 @@ def _config(trace_path: Path, redteam_enabled: bool = False) -> EnvConfig:
     return EnvConfig(
         seed=42,
         config_id="stub:test",
-        start_balance=Decimal("20.00"),
+        start_balance=Decimal("1000.00"),
         horizon_ticks=5,
         overhead_per_tick=Decimal("0.05"),
         tool_call_cost=Decimal("0.01"),

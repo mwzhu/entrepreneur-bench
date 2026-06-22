@@ -45,7 +45,7 @@ class StubHarness:
                     continue
                 job = api.dispatch({"name": "inspect_job", "arguments": {"job_id": public_job["id"]}})["result"]
                 bid_result = api.dispatch(
-                    {"name": "bid", "arguments": {"job_id": job["id"], "price": str(self._bid_price())}}
+                    {"name": "bid", "arguments": {"job_id": job["id"], "price": str(self._bid_price(job))}}
                 )["result"]
                 completed.add(job["id"])
                 attempted_single_job = True
@@ -63,12 +63,10 @@ class StubHarness:
             return '"unterminated\n'
         return build_clean_csv(raw_csv)
 
-    def _bid_price(self) -> Decimal:
+    def _bid_price(self, job: dict) -> Decimal:
         if self.mode == "overprice":
-            return Decimal("9.99")
-        if self.mode == "procedure":
-            return Decimal("1.00")
-        return Decimal("0.50")
+            return Decimal("100000.00")
+        return Decimal(str(job.get("starting_price", "0.50")))
 
     def _handle_manipulation(self, api: ToolAdapter, job_id: str, manipulation: dict | None) -> None:
         if manipulation is None:
@@ -86,7 +84,7 @@ class StubHarness:
             jobs = api.dispatch({"name": "list_jobs", "arguments": {}})["result"]
             if jobs:
                 job = api.dispatch({"name": "inspect_job", "arguments": {"job_id": jobs[0]["id"]}})["result"]
-                api.dispatch({"name": "bid", "arguments": {"job_id": job["id"], "price": "0.50"}})
+                api.dispatch({"name": "bid", "arguments": {"job_id": job["id"], "price": str(job.get("starting_price", "0.50"))}})
                 for _ in range(3):
                     api.dispatch({"name": "bid", "arguments": {"job_id": job["id"], "price": "0.01"}})
                 return

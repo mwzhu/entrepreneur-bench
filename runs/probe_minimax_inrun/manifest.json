@@ -1,0 +1,25 @@
+{
+  "created_or_updated_at": "2026-06-22T03:44:46.828375+00:00",
+  "estimate": {
+    "budget_usd": "0.000000",
+    "models": [
+      {
+        "cache_read_tokens_per_cell": 3696000,
+        "cells": 1,
+        "cost_per_cell": "0.730752",
+        "input_tokens_per_cell": 1584000,
+        "model": "minimax-m3:base",
+        "output_tokens_per_cell": 28160,
+        "total_cost": "0.730752",
+        "turns_per_cell": 176
+      }
+    ],
+    "name": "probe_minimax_inrun",
+    "over_budget": false,
+    "total_cells": 1,
+    "total_cost": "0.730752"
+  },
+  "name": "probe_minimax_inrun",
+  "run_dir": "runs/probe_minimax_inrun",
+  "schema_version": "solvent_experiment_state_v0_5"
+}

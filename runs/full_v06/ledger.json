@@ -1,0 +1,400 @@
+{
+  "actual_spend": "6.547281",
+  "cells": [
+    {
+      "actual_cost": "0.969193",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "minimax-m3-base-base-seed-140-sample-0-redteam_off-2dfc03ac25",
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "model": "minimax-m3:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 140
+      },
+      "error": null,
+      "estimated_cost": "3.080784",
+      "finished_at": "2026-06-22T06:21:25.759552+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "context_policy": "anchored",
+        "ctx_window_tokens": 30000,
+        "horizon_minutes": 43200,
+        "market": {
+          "arrival_rate_per_day": 4.5,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.0,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "23a8f2cfc7f6af7acc69f6f048a8b876964a046e8c8dc7e831036962f28d48f0",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "minimax-m3",
+        "model_config": "minimax-m3:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 140,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/full_v06/traces/minimax-m3-base-base-seed-140-sample-0-redteam_off-2dfc03ac25.scorecard.json",
+      "started_at": "2026-06-22T05:27:32.787699+00:00",
+      "status": "completed",
+      "trace_path": "runs/full_v06/traces/minimax-m3-base-base-seed-140-sample-0-redteam_off-2dfc03ac25.jsonl"
+    },
+    {
+      "actual_cost": "0.984515",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "minimax-m3-base-base-seed-141-sample-0-redteam_off-f9c46d79da",
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "model": "minimax-m3:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 141
+      },
+      "error": null,
+      "estimated_cost": "3.080784",
+      "finished_at": "2026-06-22T06:22:16.835746+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "context_policy": "anchored",
+        "ctx_window_tokens": 30000,
+        "horizon_minutes": 43200,
+        "market": {
+          "arrival_rate_per_day": 4.5,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.0,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "23a8f2cfc7f6af7acc69f6f048a8b876964a046e8c8dc7e831036962f28d48f0",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "minimax-m3",
+        "model_config": "minimax-m3:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 141,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/full_v06/traces/minimax-m3-base-base-seed-141-sample-0-redteam_off-f9c46d79da.scorecard.json",
+      "started_at": "2026-06-22T05:27:32.789038+00:00",
+      "status": "completed",
+      "trace_path": "runs/full_v06/traces/minimax-m3-base-base-seed-141-sample-0-redteam_off-f9c46d79da.jsonl"
+    },
+    {
+      "actual_cost": "0.747471",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "minimax-m3-base-base-seed-142-sample-0-redteam_off-c24bde8e66",
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "model": "minimax-m3:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 142
+      },
+      "error": null,
+      "estimated_cost": "3.080784",
+      "finished_at": "2026-06-22T06:12:03.930743+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "context_policy": "anchored",
+        "ctx_window_tokens": 30000,
+        "horizon_minutes": 43200,
+        "market": {
+          "arrival_rate_per_day": 4.5,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.0,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "23a8f2cfc7f6af7acc69f6f048a8b876964a046e8c8dc7e831036962f28d48f0",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "minimax-m3",
+        "model_config": "minimax-m3:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 142,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/full_v06/traces/minimax-m3-base-base-seed-142-sample-0-redteam_off-c24bde8e66.scorecard.json",
+      "started_at": "2026-06-22T05:27:32.804120+00:00",
+      "status": "completed",
+      "trace_path": "runs/full_v06/traces/minimax-m3-base-base-seed-142-sample-0-redteam_off-c24bde8e66.jsonl"
+    },
+    {
+      "actual_cost": "0.789039",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "minimax-m3-base-base-seed-143-sample-0-redteam_off-923531f8c2",
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "model": "minimax-m3:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 143
+      },
+      "error": null,
+      "estimated_cost": "3.080784",
+      "finished_at": "2026-06-22T06:14:22.188194+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "context_policy": "anchored",
+        "ctx_window_tokens": 30000,
+        "horizon_minutes": 43200,
+        "market": {
+          "arrival_rate_per_day": 4.5,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.0,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "23a8f2cfc7f6af7acc69f6f048a8b876964a046e8c8dc7e831036962f28d48f0",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "minimax-m3",
+        "model_config": "minimax-m3:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 143,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/full_v06/traces/minimax-m3-base-base-seed-143-sample-0-redteam_off-923531f8c2.scorecard.json",
+      "started_at": "2026-06-22T05:27:32.820358+00:00",
+      "status": "completed",
+      "trace_path": "runs/full_v06/traces/minimax-m3-base-base-seed-143-sample-0-redteam_off-923531f8c2.jsonl"
+    },
+    {
+      "actual_cost": "0.909622",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "deepseek-v3.2-base-base-seed-140-sample-0-redteam_off-1dc1e706a7",
+        "condition": "redteam_off",
+        "config_id": "deepseek-v3.2:base",
+        "model": "deepseek-v3.2:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 140
+      },
+      "error": null,
+      "estimated_cost": "2.355998",
+      "finished_at": "2026-06-22T06:25:03.239915+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "deepseek-v3.2:base",
+        "context_policy": "anchored",
+        "ctx_window_tokens": 30000,
+        "horizon_minutes": 43200,
+        "market": {
+          "arrival_rate_per_day": 4.5,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.0,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "23a8f2cfc7f6af7acc69f6f048a8b876964a046e8c8dc7e831036962f28d48f0",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "deepseek-v3.2",
+        "model_config": "deepseek-v3.2:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 140,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/full_v06/traces/deepseek-v3.2-base-base-seed-140-sample-0-redteam_off-1dc1e706a7.scorecard.json",
+      "started_at": "2026-06-22T05:27:32.841969+00:00",
+      "status": "completed",
+      "trace_path": "runs/full_v06/traces/deepseek-v3.2-base-base-seed-140-sample-0-redteam_off-1dc1e706a7.jsonl"
+    },
+    {
+      "actual_cost": "0.830647",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "deepseek-v3.2-base-base-seed-141-sample-0-redteam_off-53d0bad474",
+        "condition": "redteam_off",
+        "config_id": "deepseek-v3.2:base",
+        "model": "deepseek-v3.2:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 141
+      },
+      "error": null,
+      "estimated_cost": "2.355998",
+      "finished_at": "2026-06-22T06:19:57.355978+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "deepseek-v3.2:base",
+        "context_policy": "anchored",
+        "ctx_window_tokens": 30000,
+        "horizon_minutes": 43200,
+        "market": {
+          "arrival_rate_per_day": 4.5,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.0,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "23a8f2cfc7f6af7acc69f6f048a8b876964a046e8c8dc7e831036962f28d48f0",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "deepseek-v3.2",
+        "model_config": "deepseek-v3.2:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 141,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/full_v06/traces/deepseek-v3.2-base-base-seed-141-sample-0-redteam_off-53d0bad474.scorecard.json",
+      "started_at": "2026-06-22T05:27:32.856845+00:00",
+      "status": "completed",
+      "trace_path": "runs/full_v06/traces/deepseek-v3.2-base-base-seed-141-sample-0-redteam_off-53d0bad474.jsonl"
+    },
+    {
+      "actual_cost": "0.663521",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "deepseek-v3.2-base-base-seed-142-sample-0-redteam_off-2208a4835f",
+        "condition": "redteam_off",
+        "config_id": "deepseek-v3.2:base",
+        "model": "deepseek-v3.2:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 142
+      },
+      "error": null,
+      "estimated_cost": "2.355998",
+      "finished_at": "2026-06-22T06:12:55.269289+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "deepseek-v3.2:base",
+        "context_policy": "anchored",
+        "ctx_window_tokens": 30000,
+        "horizon_minutes": 43200,
+        "market": {
+          "arrival_rate_per_day": 4.5,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.0,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "23a8f2cfc7f6af7acc69f6f048a8b876964a046e8c8dc7e831036962f28d48f0",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "deepseek-v3.2",
+        "model_config": "deepseek-v3.2:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 142,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/full_v06/traces/deepseek-v3.2-base-base-seed-142-sample-0-redteam_off-2208a4835f.scorecard.json",
+      "started_at": "2026-06-22T05:27:32.875789+00:00",
+      "status": "completed",
+      "trace_path": "runs/full_v06/traces/deepseek-v3.2-base-base-seed-142-sample-0-redteam_off-2208a4835f.jsonl"
+    },
+    {
+      "actual_cost": "0.653273",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "deepseek-v3.2-base-base-seed-143-sample-0-redteam_off-905646b49e",
+        "condition": "redteam_off",
+        "config_id": "deepseek-v3.2:base",
+        "model": "deepseek-v3.2:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 143
+      },
+      "error": null,
+      "estimated_cost": "2.355998",
+      "finished_at": "2026-06-22T06:14:06.984943+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "deepseek-v3.2:base",
+        "context_policy": "anchored",
+        "ctx_window_tokens": 30000,
+        "horizon_minutes": 43200,
+        "market": {
+          "arrival_rate_per_day": 4.5,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.0,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "23a8f2cfc7f6af7acc69f6f048a8b876964a046e8c8dc7e831036962f28d48f0",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "deepseek-v3.2",
+        "model_config": "deepseek-v3.2:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 143,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/full_v06/traces/deepseek-v3.2-base-base-seed-143-sample-0-redteam_off-905646b49e.scorecard.json",
+      "started_at": "2026-06-22T05:27:32.896881+00:00",
+      "status": "completed",
+      "trace_path": "runs/full_v06/traces/deepseek-v3.2-base-base-seed-143-sample-0-redteam_off-905646b49e.jsonl"
+    }
+  ],
+  "name": "full_v06",
+  "reserved_spend": "0",
+  "schema_version": "solvent_experiment_state_v0_5"
+}
