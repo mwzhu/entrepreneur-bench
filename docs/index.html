@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Entrepreneur-Bench — Can an AI agent run a business?</title>
+<meta name="description" content="A deterministic eval that measures an LLM agent's ability to run an online freelance business — and decomposes its performance into per-capability regret against a computable optimum." />
+<style>
+  :root{
+    --ink:#14171c;--ink-2:#2b2f37;--paper:#ffffff;--bg:#f5f7f4;--bg-2:#eef1ec;
+    --muted:#6a7078;--line:#e3e6e0;--line-2:#d7dad3;
+    --accent:#107a52;--accent-deep:#0c5e3f;--accent-soft:#e6f2ec;--accent-soft-2:#d6ebe0;
+    --warn:#b65a2e;--warn-soft:#f6e7dd;
+    --radius:14px;--radius-sm:9px;--maxw:1060px;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,"SF Mono",Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink-2);font-family:var(--sans);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  ::selection{background:var(--accent-soft-2);color:var(--accent-deep)}
+
+  #progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--accent);z-index:60;transition:width .12s linear}
+
+  .nav{position:sticky;top:0;z-index:50;background:rgba(245,247,244,.88);backdrop-filter:saturate(140%) blur(10px);border-bottom:1px solid var(--line)}
+  .nav-inner{max-width:var(--maxw);margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:18px}
+  .brand{font-weight:700;color:var(--ink);letter-spacing:-.02em;font-size:15px;white-space:nowrap;display:flex;align-items:center;gap:9px}
+  .brand .dot{width:11px;height:11px;border-radius:3px;background:var(--accent);display:inline-block}
+  .nav-links{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+  .nav-links a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:500;padding:5px 9px;border-radius:7px;white-space:nowrap;transition:.15s}
+  .nav-links a:hover{color:var(--ink);background:var(--bg-2)}
+  .nav-links a.active{color:var(--accent-deep);background:var(--accent-soft)}
+  @media(max-width:880px){.nav-links{display:none}}
+
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+  section{padding:50px 0;border-top:1px solid var(--line)}
+  .sec-no{font-family:var(--mono);font-size:12.5px;color:var(--accent);font-weight:600;letter-spacing:.08em;margin-bottom:10px;text-transform:uppercase}
+
+  /* hero */
+  .hero{padding:74px 0 54px;border-top:none}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:18px}
+  h1.title{font-size:clamp(40px,7vw,66px);line-height:1.0;letter-spacing:-.038em;color:var(--ink);font-weight:770;margin:0 0 20px}
+  .lede{font-size:clamp(19px,2.3vw,23px);line-height:1.45;color:var(--ink-2);max-width:740px;margin:0 0 30px;font-weight:430}
+  .lede b{color:var(--ink);font-weight:680}
+
+  /* takeaway line per section */
+  .takeaway{font-size:clamp(23px,3.2vw,33px);line-height:1.18;letter-spacing:-.028em;color:var(--ink);font-weight:730;margin:0 0 14px;max-width:900px}
+  .takeaway .hl{color:var(--accent-deep);background:linear-gradient(transparent 62%,var(--accent-soft-2) 62%);padding:0 2px}
+  .takeaway .hlw{color:var(--warn)}
+  .sub{color:var(--muted);font-size:16.5px;max-width:760px;margin:0 0 22px}
+
+  /* arrow bullets */
+  ul.bul{list-style:none;padding:0;margin:18px 0}
+  ul.bul li{position:relative;padding-left:28px;margin:11px 0;font-size:16px;line-height:1.5}
+  ul.bul li::before{content:"→";position:absolute;left:0;top:0;color:var(--accent);font-weight:700}
+  ul.bul li b{color:var(--ink);font-weight:660}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 34px}
+  .grid2 ul.bul{margin:6px 0}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+
+  code{font-family:var(--mono);font-size:.85em;background:var(--bg-2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--accent-deep)}
+  strong{color:var(--ink);font-weight:650}
+  a.inline{color:var(--accent-deep);text-decoration:none;border-bottom:1px solid var(--accent-soft-2)}
+
+  /* chips */
+  .chips{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-top:6px}
+  @media(max-width:760px){.chips{grid-template-columns:repeat(2,1fr)}}
+  .chip{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:17px}
+  .chip .big{font-size:30px;font-weight:760;color:var(--ink);letter-spacing:-.03em;line-height:1}
+  .chip .big .u{font-size:16px;color:var(--muted);font-weight:600}
+  .chip .lab{margin-top:8px;font-size:12.5px;color:var(--muted);line-height:1.35}
+
+  /* callout */
+  .callout{background:var(--paper);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--radius-sm);padding:15px 20px;margin:22px 0;font-size:15.5px;line-height:1.55}
+  .callout.warn{border-left-color:var(--warn);background:#fdfaf7}
+  .callout .ctag{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;display:block;margin-bottom:5px}
+  .callout.warn .ctag{color:var(--warn)}
+
+  /* figures */
+  figure{margin:26px 0}
+  .fig-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px 14px;overflow:hidden}
+  figcaption{font-size:13px;color:var(--muted);line-height:1.45;margin-top:11px;max-width:780px}
+  figcaption b{color:var(--ink-2);font-weight:600}
+  .fig-label{font-family:var(--mono);font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:4px}
+  svg{display:block;width:100%;height:auto}
+
+  /* tables */
+  .tbl-wrap{margin:22px 0;overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper)}
+  table{border-collapse:collapse;width:100%;font-size:14px;min-width:520px}
+  th,td{text-align:left;padding:10px 15px;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{background:var(--bg-2);color:var(--ink);font-weight:640;font-size:12px;letter-spacing:.03em;text-transform:uppercase}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#fbfcfa}
+  .t-num{font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:13px;white-space:nowrap}
+  .t-grp td{background:var(--bg);font-weight:600;color:var(--accent-deep);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  caption{caption-side:bottom;text-align:left;font-size:12.5px;color:var(--muted);padding:10px 15px;line-height:1.45}
+
+  /* bucket cards */
+  .buckets{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}
+  @media(max-width:820px){.buckets{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:520px){.buckets{grid-template-columns:1fr}}
+  .bk{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px}
+  .bk .hd{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+  .bk .ico{width:27px;height:27px;border-radius:7px;background:var(--accent-soft);color:var(--accent-deep);display:grid;place-items:center;flex:none}
+  .bk .ico svg{width:15px;height:15px}
+  .bk .nm{font-weight:680;color:var(--ink);font-size:15px}
+  .bk p{font-size:13px;color:var(--muted);margin:0;line-height:1.45}
+
+  /* kpis */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:22px 0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--paper)}
+  @media(max-width:680px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{padding:17px 18px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .kpi .v{font-size:25px;font-weight:760;color:var(--ink);letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+  .kpi .v.good{color:var(--accent-deep)} .kpi .v.bad{color:var(--warn)}
+  .kpi .k{margin-top:7px;font-size:12px;color:var(--muted);line-height:1.35}
+
+  .quote{font-size:17px;line-height:1.55;color:var(--ink-2);border-left:3px solid var(--accent-soft-2);padding:4px 0 4px 18px;margin:18px 0;font-style:italic}
+  .quote b{font-style:normal;color:var(--ink)}
+
+  footer{border-top:1px solid var(--line);padding:36px 0 60px;color:var(--muted);font-size:13.5px}
+  .foot-grid{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;align-items:flex-end}
+  footer a{color:var(--accent-deep);text-decoration:none}
+  .small{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <span class="brand"><span class="dot"></span>Entrepreneur-Bench</span>
+    <div class="nav-links">
+      <a href="#why">Why</a>
+      <a href="#world">The world</a>
+      <a href="#jobs">Jobs</a>
+      <a href="#agent">Agent</a>
+      <a href="#score">Scoring</a>
+      <a href="#results">Results</a>
+      <a href="#next">Next</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Eval benchmark · built on Solvent v0.5 · ~5-min read</div>
+    <h1 class="title">Can an AI agent<br>run a business?</h1>
+    <p class="lede">
+      Drop a model into a mock freelance marketplace, tell it to turn a profit, and measure
+      <b>not just how much it earns — but which business skill is costing it the most.</b>
+    </p>
+    <div class="chips">
+      <div class="chip"><div class="big">6</div><div class="lab">skills scored separately, not one bottom-line number</div></div>
+      <div class="chip"><div class="big">18</div><div class="lab">tools: find work, negotiate, deliver, remember</div></div>
+      <div class="chip"><div class="big">~45<span class="u">%</span></div><div class="lab">of the perfect-play optimum reached by the best real run</div></div>
+      <div class="chip"><div class="big">100<span class="u">% replayable</span></div><div class="lab">deterministic &amp; seeded — so we can compute the optimum</div></div>
+    </div>
+  </div>
+</header>
+
+<!-- WHY -->
+<section id="why">
+  <div class="wrap">
+    <div class="sec-no">01 · Why</div>
+    <p class="takeaway">A final profit number is <span class="hlw">an answer key with the work erased.</span></p>
+    <p class="sub">Vending-Bench scored agents on net worth alone. Two agents can hit the same balance for opposite reasons — and that single number can't tell them apart.</p>
+    <div class="grid2">
+      <ul class="bul">
+        <li><b>The inspiration:</b> running a business tests <b>long-horizon coherence</b> — the skill frontier models still lack.</li>
+        <li><b>The gap:</b> net worth says <em>how much</em>, never <em>why</em>. Real-world tests (Project Vend) are slow and noisy.</li>
+      </ul>
+      <ul class="bul">
+        <li><b>Our move:</b> we own the environment, so we can compute the <b>perfect-foresight optimum</b>.</li>
+        <li><b>The payoff:</b> the gap to optimum = <b>regret</b>, split across the skills that caused it.</li>
+      </ul>
+    </div>
+    <p class="sub" style="margin-top:6px">We score six skills independently — each against its own optimum:</p>
+    <div class="buckets">
+      <div class="bk"><div class="hd"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><span class="nm">Job selection</span></div><p>Takes the profitable jobs, skips the decoy traps.</p></div>
+      <div class="bk"><div class="hd"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span class="nm">Pricing</span></div><p>Bids near the client's hidden ceiling, not below it.</p></div>
+      <div class="bk"><div class="hd"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></span><span class="nm">Delivery</span></div><p>The work actually passes the client's rubric.</p></div>
+      <div class="bk"><div class="hd"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83 1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0 1.65 1.65 0 0 0-1.51-1 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83 1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H2a2 2 0 0 1 0-4 1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83 1.65 1.65 0 0 0 1.82.33H8a1.65 1.65 0 0 0 1-1.51V2a2 2 0 0 1 4 0 1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83 1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H22a2 2 0 0 1 0 4Z"/></svg></span><span class="nm">Tool selection</span></div><p>Hires the cheapest model good enough for the job.</p></div>
+      <div class="bk"><div class="hd"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0z"/><path d="M12 7v5l3 3"/></svg></span><span class="nm">Coherence</span></div><p>No dropped work, re-bids, or action loops.</p></div>
+      <div class="bk"><div class="hd"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></span><span class="nm">Support</span></div><p>Holds the line when a client pushes for a discount.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- THE WORLD -->
+<section id="world">
+  <div class="wrap">
+    <div class="sec-no">02 · The world</div>
+    <p class="takeaway">A freelance business in a <span class="hl">sealed, replayable world.</span></p>
+    <p class="sub">Open the job board → accept or haggle → deliver → get paid on success. A daily overhead, the delivery fee, and the agent's own tokens all drain the balance. Game over at the horizon or when it goes broke.</p>
+  </div>
+
+  <div class="wrap">
+  <figure>
+    <div class="fig-card">
+      <div class="fig-label">Figure 1 · The loop</div>
+      <svg viewBox="0 0 1000 360" role="img" aria-label="The agent's operating loop">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9aa0a6"/></marker>
+          <marker id="arrG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#107a52"/></marker>
+          <marker id="arrW" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#b65a2e"/></marker>
+        </defs>
+        <style>
+          .nbox{fill:#ffffff;stroke:#d7dad3;stroke-width:1.4}.nacc{fill:#e6f2ec;stroke:#107a52;stroke-width:1.5}
+          .ntitle{font:650 15px var(--sans,sans-serif);fill:#14171c}.nsub{font:400 12px var(--sans,sans-serif);fill:#6a7078}
+          .flab{font:600 11.5px ui-monospace,monospace;fill:#6a7078}.glab{font:600 11.5px ui-monospace,monospace;fill:#107a52}
+          .conn{stroke:#9aa0a6;stroke-width:1.6;fill:none}.connG{stroke:#107a52;stroke-width:1.8;fill:none}.cost{stroke:#b65a2e;stroke-width:1.5;fill:none;stroke-dasharray:4 4}
+        </style>
+        <rect class="nbox" x="20" y="60" width="158" height="74" rx="12"/><text class="ntitle" x="99" y="94" text-anchor="middle">Job board</text><text class="nsub" x="99" y="114" text-anchor="middle">jobs arrive over time</text>
+        <rect class="nacc" x="222" y="60" width="158" height="74" rx="12"/><text class="ntitle" x="301" y="88" text-anchor="middle">Accept / Bid</text><text class="nsub" x="301" y="106" text-anchor="middle">take floor, or counter</text><text class="nsub" x="301" y="122" text-anchor="middle">once vs hidden ceiling</text>
+        <rect class="nbox" x="424" y="60" width="150" height="74" rx="12"/><text class="ntitle" x="499" y="94" text-anchor="middle">In&#8209;progress</text><text class="nsub" x="499" y="114" text-anchor="middle">accepted, not done</text>
+        <rect class="nacc" x="618" y="60" width="158" height="74" rx="12"/><text class="ntitle" x="697" y="88" text-anchor="middle">Deliver</text><text class="nsub" x="697" y="106" text-anchor="middle">hire a model,</text><text class="nsub" x="697" y="122" text-anchor="middle">verify vs rubric</text>
+        <rect class="nacc" x="820" y="60" width="158" height="74" rx="12"/><text class="ntitle" x="899" y="94" text-anchor="middle">Paid ✓</text><text class="nsub" x="899" y="114" text-anchor="middle">revenue credited</text>
+        <path class="conn" d="M178 97 H222" marker-end="url(#arr)"/><text class="flab" x="200" y="88" text-anchor="middle">observe</text>
+        <path class="connG" d="M380 97 H424" marker-end="url(#arrG)"/><text class="glab" x="402" y="88" text-anchor="middle">win</text>
+        <path class="conn" d="M574 97 H618" marker-end="url(#arr)"/><text class="flab" x="596" y="88" text-anchor="middle">submit</text>
+        <path class="connG" d="M776 97 H820" marker-end="url(#arrG)"/><text class="glab" x="798" y="88" text-anchor="middle">pass</text>
+        <path class="conn" d="M899 134 V190 H99 V134" marker-end="url(#arr)"/><text class="flab" x="499" y="208" text-anchor="middle">advance business time → next arrival / expiry / horizon</text>
+        <rect x="20" y="250" width="958" height="82" rx="12" fill="#fbf6f2" stroke="#eaddd3" stroke-width="1.2"/>
+        <text class="flab" x="40" y="276" style="fill:#b65a2e">EVERY STEP DRAINS THE BALANCE</text>
+        <rect x="40" y="288" width="280" height="32" rx="9" fill="#ffffff" stroke="#eaddd3"/><text class="nsub" x="58" y="309" style="fill:#b65a2e;font-weight:600">Daily overhead</text><text class="nsub" x="178" y="309">lights-on cost</text>
+        <rect x="360" y="288" width="280" height="32" rx="9" fill="#ffffff" stroke="#eaddd3"/><text class="nsub" x="378" y="309" style="fill:#b65a2e;font-weight:600">Delivery fee</text><text class="nsub" x="488" y="309">charged pass or fail</text>
+        <rect x="680" y="288" width="298" height="32" rx="9" fill="#ffffff" stroke="#eaddd3"/><text class="nsub" x="698" y="309" style="fill:#b65a2e;font-weight:600">Brain (LLM) cost</text><text class="nsub" x="828" y="309">its own tokens</text>
+        <path class="cost" d="M180 288 V230" marker-end="url(#arrW)"/><path class="cost" d="M500 288 V230" marker-end="url(#arrW)"/><path class="cost" d="M829 288 V230" marker-end="url(#arrW)"/>
+      </svg>
+    </div>
+    <figcaption><b>Same seed in → same world out.</b> We deliberately separate the <b>entrepreneur's judgment</b> (what we score) from <b>operating costs</b> like the delivery fee (an in-world expense it must reason about).</figcaption>
+  </figure>
+  </div>
+
+  <div class="wrap">
+    <p class="sub" style="margin-bottom:6px"><b>The one twist that makes pricing hard:</b> each job has a hidden ceiling, and the agent gets <b>one</b> shot at it.</p>
+  <figure>
+    <div class="fig-card">
+      <div class="fig-label">Figure 2 · The one-shot bid</div>
+      <svg viewBox="0 0 900 184" role="img" aria-label="The one-shot bidding mechanic">
+        <style>.axn{font:600 13px var(--sans,sans-serif)}.axs{font:400 12px var(--sans,sans-serif);fill:#6a7078}</style>
+        <line x1="70" y1="78" x2="830" y2="78" stroke="#d7dad3" stroke-width="2"/>
+        <rect x="170" y="72" width="470" height="12" fill="#e6f2ec"/>
+        <line x1="170" y1="60" x2="170" y2="96" stroke="#14171c" stroke-width="2"/><circle cx="170" cy="78" r="5" fill="#14171c"/>
+        <text class="axn" x="170" y="50" text-anchor="middle" fill="#14171c">starting_price</text><text class="axs" x="170" y="116" text-anchor="middle">posted floor (visible)</text>
+        <line x1="640" y1="60" x2="640" y2="96" stroke="#b65a2e" stroke-width="2" stroke-dasharray="4 3"/><circle cx="640" cy="78" r="5" fill="#b65a2e"/>
+        <text class="axn" x="640" y="50" text-anchor="middle" fill="#b65a2e">hidden ceiling</text><text class="axs" x="640" y="116" text-anchor="middle">reservation_price (hidden)</text>
+        <text class="axs" x="405" y="146" text-anchor="middle" fill="#107a52">counter in here → win at your price (surplus captured)</text>
+        <text class="axs" x="735" y="146" text-anchor="middle" fill="#b65a2e">over the line → rejected, floor stays open</text>
+        <line x1="170" y1="166" x2="640" y2="166" stroke="#107a52" stroke-width="6" opacity=".25"/><line x1="640" y1="166" x2="830" y2="166" stroke="#b65a2e" stroke-width="6" opacity=".25"/>
+      </svg>
+    </div>
+    <figcaption>Bid just under the ceiling = optimal. Bid low = a self-inflicted discount. Bid over = wasted negotiation. The gap to the ceiling is logged as <b>pricing regret</b>.</figcaption>
+  </figure>
+  </div>
+</section>
+
+<!-- JOBS -->
+<section id="jobs">
+  <div class="wrap">
+    <div class="sec-no">03 · Jobs &amp; market</div>
+    <p class="takeaway">The agent sees the work. <span class="hl">We see the answer key.</span></p>
+    <p class="sub">Jobs are small auto-gradable gigs (clean a CSV, extract a field). Each has a public face the agent decides on, and a hidden record we grade against.</p>
+    <div class="grid2">
+      <div>
+        <div class="tbl-wrap" style="margin-top:6px">
+          <table>
+            <thead><tr><th>Public</th><th>Hidden</th></tr></thead>
+            <tbody>
+              <tr><td><code>starting_price</code> — opening offer</td><td><code>reservation_price</code> — true ceiling</td></tr>
+              <tr><td><code>brief</code> / <code>inputs</code> — the work</td><td><code>est_cost</code> — cost to deliver</td></tr>
+              <tr><td><code>arrival</code> / <code>expiry</code></td><td><code>is_decoy</code> — a money-losing trap</td></tr>
+              <tr><td>—</td><td><code>difficulty</code> + <code>rubric</code></td></tr>
+            </tbody>
+            <caption>Everything needed to <em>decide</em> is public; everything needed to <em>grade vs optimal</em> is hidden.</caption>
+          </table>
+        </div>
+      </div>
+      <ul class="bul">
+        <li><b>Two task types:</b> <code>data_clean</code> &amp; <code>extract</code>, at easy / med / hard.</li>
+        <li><b>Poisson stream:</b> ~4.5 jobs/day, ~30% decoys, mixed difficulty.</li>
+        <li><b>Decoys</b> punish greedy selection; <b>difficulty</b> forces real model choice.</li>
+      </ul>
+    </div>
+
+    <p class="sub" style="margin:14px 0 6px"><b>The agent doesn't do the work — it subcontracts.</b> Three delivery models trade price for capability:</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Model</th><th>Price</th><th>Capability</th><th>easy</th><th>med</th><th>hard</th></tr></thead>
+        <tbody>
+          <tr><td><code>tool-mini</code></td><td class="t-num">$2</td><td class="t-num">0.55</td><td class="t-num">97%</td><td class="t-num">55%</td><td class="t-num" style="color:var(--warn)">15%</td></tr>
+          <tr><td><code>tool-mid</code></td><td class="t-num">$12</td><td class="t-num">0.80</td><td class="t-num">99%</td><td class="t-num">90%</td><td class="t-num">55%</td></tr>
+          <tr><td><code>tool-pro</code></td><td class="t-num">$45</td><td class="t-num">0.95</td><td class="t-num">100%</td><td class="t-num">98%</td><td class="t-num">85%</td></tr>
+        </tbody>
+        <caption>Hidden pass rates (<code>data_clean</code>). On easy, <code>tool-pro</code> is a 22× overpay; on hard, <code>tool-mini</code> fails 85% of the time and still bills you. <b>Picking well is the resource-allocation skill.</b></caption>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- AGENT -->
+<section id="agent">
+  <div class="wrap">
+    <div class="sec-no">04 · The agent</div>
+    <p class="takeaway">A deliberately plain agent — <span class="hl">we measure the model, not our scaffolding.</span></p>
+    <p class="sub">A basic ReAct loop: read the situation, call one tool, repeat. One system prompt, a persistent notebook, and 18 tools. No hints about decoys, ceilings, or which model fits which job — it has to figure the market out.</p>
+
+    <div class="quote">"You run a tiny freelance services business… <b>maximize your final balance.</b> Each job shows a visible <code>starting_price</code> and a hidden ceiling… you get a <b>single delivery attempt</b>… The episode terminates when the horizon is reached or the business becomes insolvent." <span class="small">— the system prompt, in brief</span></div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Group</th><th>Tools</th></tr></thead>
+        <tbody>
+          <tr><td><b>Discover</b></td><td><code>list_jobs</code> · <code>inspect_job</code> · <code>clarify</code></td></tr>
+          <tr><td><b>Negotiate</b></td><td><code>accept</code> · <code>bid</code> · <code>decline</code></td></tr>
+          <tr><td><b>Deliver</b></td><td><code>list_models</code> · <code>deliver</code> · <code>submit</code></td></tr>
+          <tr><td><b>Support</b></td><td><code>respond</code> <span class="small">(hold_price / discount)</span></td></tr>
+          <tr><td><b>Bookkeeping + memory</b></td><td><code>check_balance</code> · <code>list_in_progress</code> · <code>mem_write/read/list/delete</code></td></tr>
+          <tr><td><b>Time</b></td><td><code>end_tick</code> · <code>advance_to_next_event</code></td></tr>
+        </tbody>
+        <caption>A durable notebook + a bounded-context policy (the <code>anchored</code> one lifts prompt-cache hits from ~0% to 50–80%) keep long runs coherent and affordable.</caption>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- SCORING -->
+<section id="score">
+  <div class="wrap">
+    <div class="sec-no">05 · Scoring</div>
+    <p class="takeaway">Replay each run against the <span class="hl">best it could have done.</span></p>
+    <p class="sub">Because we set every value, we can compute reference policies and grade the agent as a fraction of each — then read where the gap comes from.</p>
+    <div class="grid2">
+      <ul class="bul">
+        <li><b>Omniscient optimum</b> — perfect foresight, every delivery passes. The hard ceiling.</li>
+        <li><b>Realizable</b> — same plan, discounted by real delivery luck. The achievable ceiling.</li>
+        <li><b>Threshold policy</b> — a simple greedy baseline. A good agent should <em>beat</em> it.</li>
+      </ul>
+      <ul class="bul">
+        <li><b>Headline</b> = fraction of omniscient optimum; the rest is <b>regret</b>.</li>
+        <li><b>Regret is split per skill</b> — selection, pricing, delivery, tool, coherence, support.</li>
+        <li><b>Luck removed</b> via an expected-value control variate (price × true pass-prob).</li>
+      </ul>
+    </div>
+    <div class="callout warn"><span class="ctag">One honest caveat</span> Per-skill regrets are each measured against their <b>own</b> optimum, so they <b>rank</b> where loss concentrates — they don't add up to the total gap. Early-terminated runs are graded only over reachable jobs.</div>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section id="results">
+  <div class="wrap">
+    <div class="sec-no">06 · Results <span style="color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0">· real runs, preliminary</span></div>
+    <p class="takeaway">DeepSeek-V3.2 reaches <span class="hl">30–45% of optimal</span> — and the decomposition says exactly why.</p>
+    <p class="sub">Real runs (seeds 140–142, 14-day market, tool-mediated). Against a ~$11k perfect-play optimum, it lands <em>below</em> even the simple online baseline.</p>
+  </div>
+
+  <div class="wrap">
+  <figure>
+    <div class="fig-card">
+      <div class="fig-label">Figure 3 · The reference ladder — net revenue</div>
+      <svg viewBox="0 0 920 250" role="img" aria-label="Net revenue vs reference policies">
+        <style>.barlab{font:600 14px var(--sans,sans-serif);fill:#14171c}.barsub{font:400 11.5px var(--sans,sans-serif);fill:#6a7078}.barval{font:700 13.5px ui-monospace,monospace}</style>
+        <text class="barlab" x="232" y="40" text-anchor="end">Omniscient optimum</text><text class="barsub" x="232" y="55" text-anchor="end">perfect foresight</text>
+        <rect x="248" y="26" width="600" height="32" rx="6" fill="#0c5e3f"/><text class="barval" x="836" y="47" text-anchor="end" fill="#fff">$11,022</text><text class="barsub" x="856" y="46">100%</text>
+        <text class="barlab" x="232" y="96" text-anchor="end">Threshold policy</text><text class="barsub" x="232" y="111" text-anchor="end">simple baseline</text>
+        <rect x="248" y="82" width="306" height="32" rx="6" fill="#9aa0a6"/><text class="barval" x="542" y="103" text-anchor="end" fill="#fff">≈$5,600</text><text class="barsub" x="564" y="102">51%</text>
+        <text class="barlab" x="232" y="152" text-anchor="end">DeepSeek · best run</text><text class="barsub" x="232" y="167" text-anchor="end">batch B</text>
+        <rect x="248" y="138" width="271" height="32" rx="6" fill="#107a52"/><text class="barval" x="507" y="159" text-anchor="end" fill="#fff">$4,968</text><text class="barsub" x="529" y="158">45%</text>
+        <text class="barlab" x="232" y="208" text-anchor="end">DeepSeek · earlier</text><text class="barsub" x="232" y="223" text-anchor="end">batch A</text>
+        <rect x="248" y="194" width="183" height="32" rx="6" fill="#5a9e82"/><text class="barval" x="419" y="215" text-anchor="end" fill="#fff">$3,355</text><text class="barsub" x="441" y="214">30%</text>
+      </svg>
+    </div>
+    <figcaption>Both batches fall short of the threshold policy — the gap to optimum is large and not explained by luck. The two-batch spread is why <b>multi-seed evaluation matters.</b></figcaption>
+  </figure>
+  </div>
+
+  <div class="wrap">
+    <p class="sub" style="margin:6px 0"><b>Where the money goes:</b> almost all of it is one skill — it doesn't take enough work.</p>
+  <figure>
+    <div class="fig-card">
+      <div class="fig-label">Figure 4 · Regret by skill — DeepSeek, batch B</div>
+      <svg viewBox="0 0 920 232" role="img" aria-label="Regret decomposition by capability">
+        <style>.rl{font:600 14px var(--sans,sans-serif);fill:#14171c}.rs{font:400 11.5px var(--sans,sans-serif);fill:#6a7078}.rv{font:700 13px ui-monospace,monospace;fill:#b65a2e}</style>
+        <text class="rl" x="222" y="36" text-anchor="end">Job selection</text><text class="rs" x="222" y="51" text-anchor="end">takes only ~⅔ of good jobs</text>
+        <rect x="238" y="22" width="560" height="28" rx="5" fill="#b65a2e"/><text class="rv" x="810" y="42">$4,015</text>
+        <text class="rl" x="222" y="90" text-anchor="end">Pricing</text><text class="rs" x="222" y="105" text-anchor="end">bids ~85% of ceiling</text>
+        <rect x="238" y="76" width="194" height="28" rx="5" fill="#cf7d4f"/><text class="rv" x="444" y="96">$1,388</text>
+        <text class="rl" x="222" y="144" text-anchor="end">Tool selection</text><text class="rs" x="222" y="159" text-anchor="end">mis-sized hires</text>
+        <rect x="238" y="130" width="69" height="28" rx="5" fill="#e0a578"/><text class="rv" x="319" y="150">$492</text>
+        <text class="rl" x="222" y="198" text-anchor="end">Coherence</text><text class="rs" x="222" y="213" text-anchor="end">basically clean</text>
+        <rect x="238" y="184" width="5" height="28" rx="2" fill="#e7c9b0"/><text class="rv" x="255" y="204">≈$0</text>
+      </svg>
+    </div>
+    <figcaption>Each bar = that skill's regret vs its own optimum (a ranking, not an additive split). <b>Selection dominates; coherence is clean.</b></figcaption>
+  </figure>
+  </div>
+
+  <div class="wrap">
+    <div class="kpis">
+      <div class="kpi"><div class="v good">1.00</div><div class="k">Precision — never took a bad job</div></div>
+      <div class="kpi"><div class="v bad">0.67</div><div class="k">Recall — took only ⅔ of good jobs</div></div>
+      <div class="kpi"><div class="v">0.85</div><div class="k">Price ratio — undercharges vs ceiling</div></div>
+      <div class="kpi"><div class="v">0.80</div><div class="k">Pass rate — deliveries usually pass</div></div>
+    </div>
+    <div class="quote">A <b>cautious freelancer</b>: vets every job, never takes a bad one, delivers reliably — then turns down half the good work and undercharges for the rest. That's a different failure than a meltdown, and the decomposition shows it at a glance.</div>
+    <div class="callout warn"><span class="ctag">Read honestly</span> Tiny samples (n=3/batch). The "14-day" runs <b>terminate early (~day 6–9)</b> on the compute guard, so recall &amp; fraction-of-optimal are truncation ceilings. The full matrix (7 models, 60 days) <b>hasn't run yet</b> — this is a proof-of-instrument, not a model ranking.</div>
+  </div>
+</section>
+
+<!-- NEXT -->
+<section id="next">
+  <div class="wrap">
+    <div class="sec-no">07 · Limitations &amp; next</div>
+    <p class="takeaway">The toy world is the easy part to fix. <span class="hl">The decomposition is the idea worth keeping.</span></p>
+    <div class="grid2">
+      <ul class="bul">
+        <li><b>Real tasks</b> — ground gigs in something like SWE-Lancer.</li>
+        <li><b>Real delivery models</b> — swap synthetic tools for actual models.</li>
+        <li><b>Measured pass rates</b> — characterize them, don't hand-author.</li>
+        <li><b>Competition</b> — rival agents, arena, price wars.</li>
+      </ul>
+      <ul class="bul">
+        <li><b>Parallel jobs</b> — let it run a portfolio, not one at a time.</li>
+        <li><b>Richer social layer</b> — negotiation, haggling, red-team pressure.</li>
+        <li><b>Reputation</b> that gates access to better work.</li>
+        <li><b>Longer horizons, more models, repeated seeds.</b></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div style="font-weight:700;color:var(--ink);font-size:15px;letter-spacing:-.02em;margin-bottom:5px;display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:var(--accent);display:inline-block"></span>Entrepreneur-Bench</div>
+        <div class="small">Built on Solvent v0.5 · working draft, June 2026</div>
+      </div>
+      <div class="small" style="text-align:right">Inspired by <a href="https://andonlabs.com/evals/vending-bench-2">Vending-Bench 2</a> &amp; <a href="https://arxiv.org/abs/2502.15840">arXiv:2502.15840</a></div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var bar=document.getElementById('progress');
+  var links=Array.prototype.slice.call(document.querySelectorAll('.nav-links a'));
+  var secs=links.map(function(a){return document.querySelector(a.getAttribute('href'));});
+  function onScroll(){
+    var st=window.scrollY||document.documentElement.scrollTop;
+    var h=document.documentElement.scrollHeight-window.innerHeight;
+    if(bar)bar.style.width=(h>0?(st/h*100):0)+'%';
+    var idx=0,mid=st+window.innerHeight*0.3;
+    for(var i=0;i<secs.length;i++){if(secs[i]&&secs[i].offsetTop<=mid)idx=i;}
+    links.forEach(function(a,i){a.classList.toggle('active',i===idx);});
+  }
+  window.addEventListener('scroll',onScroll,{passive:true});
+  window.addEventListener('resize',onScroll);onScroll();
+})();
+</script>
+</body>
+</html>

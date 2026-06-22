@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Entrepreneur-Bench: A Benchmark Evaluating AI's Ability to Run An Online Business</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root{
+    --ink:#1a1c1f; --muted:#5d6470; --faint:#8b919c; --line:#e6e8ec;
+    --bg:#ffffff; --panel:#f7f8fa; --accent:#1d9e75; --accent2:#d85a30;
+    --code:#0f1115;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;
+    line-height:1.7;font-size:16px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:840px;margin:0 auto;padding:56px 24px 96px}
+  h1{font-size:30px;line-height:1.25;font-weight:650;letter-spacing:-0.01em;margin:0 0 6px}
+  .sub{color:var(--muted);font-size:16px;margin:0 0 36px}
+  h2{font-size:22px;font-weight:620;margin:48px 0 4px;padding-top:18px;border-top:1px solid var(--line);letter-spacing:-0.01em}
+  h3{font-size:17px;font-weight:600;margin:28px 0 6px;color:var(--ink)}
+  p{margin:10px 0}
+  ul{margin:8px 0 8px;padding-left:22px}
+  li{margin:4px 0}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(29,158,117,.3)}
+  a:hover{border-color:var(--accent)}
+  .lede{font-size:17px;color:var(--ink)}
+  .tag{display:inline-block;font-size:12px;font-weight:600;color:var(--accent);
+    background:rgba(29,158,117,.1);padding:2px 9px;border-radius:999px;margin-bottom:14px;letter-spacing:.02em}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px;
+    background:var(--panel);padding:1px 5px;border-radius:4px}
+  table{border-collapse:collapse;width:100%;margin:16px 0;font-size:14.5px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:13px}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  tr td:first-child{color:var(--ink)}
+  .win{color:var(--accent);font-weight:600}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:18px 0}
+  .prompt{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:13px;line-height:1.6;color:#2a2d33;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:16px 18px;margin:12px 0;overflow-x:auto}
+  .chartcard{border:1px solid var(--line);border-radius:12px;padding:18px 18px 14px;margin:14px 0 6px;background:#fff}
+  .chartwrap{position:relative;width:100%;height:330px}
+  .legend{display:flex;flex-wrap:wrap;gap:18px;margin:0 0 10px;font-size:13px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .sw{width:16px;height:3px;display:inline-block}
+  .dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+  .tri{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;display:inline-block}
+  .cap{font-size:13px;color:var(--faint);margin:4px 2px 22px}
+  .toolitem{margin:2px 0}
+  .toolitem b{font-weight:600}
+  .note{font-size:14px;color:var(--muted)}
+  .kbd{font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--accent2)}
+  .small{font-size:14px;color:var(--muted)}
+  .trace{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:11px 14px;margin:10px 0}
+  .trace .tlabel{display:block;font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+  .trace .tq{display:block;color:#3a3d43;font-style:italic;font-size:13.5px;margin:5px 0}
+  .trace .tline{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted);margin:3px 0}
+  .trace .tcall{color:var(--accent)}
+  .trace .terr{color:var(--accent2)}
+  .tracepair{display:flex;gap:10px;align-items:stretch;margin:10px 0}
+  .tracepair>.trace{flex:1;min-width:0;margin:0}
+  @media(max-width:620px){.tracepair{flex-direction:column}}
+  table.tools td:first-child{font-weight:600;color:var(--ink);width:210px;vertical-align:middle}
+  table.tools code{font-size:13px}
+  table.tools .note{color:var(--faint);font-size:13px}
+  .diagram{border:1px solid var(--line);border-radius:12px;padding:22px 22px 14px;margin:22px 0 6px;background:#fff}
+  .diagram svg{width:100%;height:auto;display:block}
+  .viewtoggle{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:0 0 12px}
+  .viewtoggle button{appearance:none;border:none;background:#fff;color:var(--muted);font:inherit;font-size:13px;padding:5px 13px;cursor:pointer}
+  .viewtoggle button+button{border-left:1px solid var(--line)}
+  .viewtoggle button.active{background:var(--accent);color:#fff}
+  table.metrics .grp td{font-weight:600;color:var(--accent);font-size:12px;letter-spacing:.04em;text-transform:uppercase;padding:16px 12px 5px;border-bottom:1px solid var(--line)}
+  table.metrics .grp.first td{padding-top:4px}
+  .info{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--faint);color:var(--faint);font-size:10px;font-style:italic;font-weight:700;font-family:Georgia,serif;margin-left:5px;cursor:help;position:relative;vertical-align:middle;line-height:1}
+  .info:hover{border-color:var(--accent);color:var(--accent)}
+  .info:hover::after{content:attr(data-tip);position:absolute;left:50%;bottom:150%;transform:translateX(-50%);width:262px;background:var(--ink);color:#fff;font:400 12px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;font-style:normal;text-transform:none;letter-spacing:normal;text-align:left;padding:9px 11px;border-radius:8px;z-index:20;box-shadow:0 4px 16px rgba(0,0,0,.18);pointer-events:none}
+  .info:hover::before{content:'';position:absolute;left:50%;bottom:150%;transform:translateX(-50%) translateY(100%);border:5px solid transparent;border-top-color:var(--ink);z-index:20}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Entrepreneur-Bench: A Benchmark Evaluating AI's Ability to Run An Online Business</h1>
+  <p class="sub">A Vending-Bench&ndash;style simulation that measures whether an AI agent can run a freelance software services business.</p>
+
+  <h2>Intro</h2>
+  <p><b>Problem Statement:</b> Can AI turn funding into revenue online?</p>
+  <p><b>Concept Generation:</b></p>
+  <ul>
+    <li><a href="https://github.com/Conway-Research/automaton">https://github.com/Conway-Research/automaton</a>: OpenClaw for Internet Money</li>
+    <li>No structured and reproducible way of evaluating Automaton (outside of real world performance)</li>
+    <li>Apply Vending-Bench framework idea of generating an environment simulation to evaluate Automaton</li>
+  </ul>
+  <p><b>Vertical Chosen:</b> Freelance software services (Upwork) due to the possibility of leveraging SWE-lancer dataset (considered other online business models like SaaS and ecommerce).</p>
+  <p><b>Goal:</b> Measuring not just total profit as output but also other capabilities crucial to running business: problem selection, pricing, tool selection, resource allocation.</p>
+
+  <h2>Method</h2>
+
+  <h3>Environment Setup</h3>
+  <p>The agent is a solo freelance software services business owner working on a platform like Upwork with the goal of maximizing profit.</p>
+  <p>There is a job board with 3&ndash;6 new jobs per day, and jobs have expiration dates too. Each job has a starting price and a higher internal price the employer is willing to pay (unknown to agent). The agent can choose to accept the starting price or offer a new price only once, which the employer can accept or reject. If the employer rejects, the agent can still accept the starting price (this mechanism evaluates agent's problem selection and pricing skill).</p>
+  <p>To complete tasks, the agent has multiple coding agent options to choose from, each with different intelligence, cost, and speed. The idea is to mimic a human software freelancer, and evaluate the agent's tool selection and resource allocation skill.</p>
+  <p>At start, the business starts with $1000. Task prices range from about $50&ndash;500. The business gains revenue when successfully delivering tasks. The business's costs include the money it spends using coding agents to deliver tasks and an extra $10/day for rent.</p>
+
+  <table>
+    <thead>
+      <tr><th>Model</th><th class="n">Price</th><th>Speed</th><th class="n">Capability</th><th class="n">easy</th><th class="n">med</th><th class="n">hard</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>tool-mini</td><td class="n">$2.00</td><td>fast</td><td class="n">0.55</td><td class="n">0.95</td><td class="n">0.52</td><td class="n">0.14</td></tr>
+      <tr><td>tool-mid</td><td class="n">$12.00</td><td>medium</td><td class="n">0.80</td><td class="n">0.99</td><td class="n">0.87</td><td class="n">0.53</td></tr>
+      <tr><td>tool-pro</td><td class="n">$45.00</td><td>fast</td><td class="n">0.95</td><td class="n">1.00</td><td class="n">0.97</td><td class="n">0.83</td></tr>
+    </tbody>
+  </table>
+  <p class="small">Columns easy/med/hard are the probability each model successfully delivers a task of that difficulty.</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 820 432" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture: a long-running agent loop runs marketplace and delivery tools against a job-board and delivery simulation; scoring is the money balance after 30 days plus selection, pricing and tool-choice capabilities.">
+      <defs>
+        <marker id="arR" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#9aa0a8"/></marker>
+        <marker id="arL" markerWidth="9" markerHeight="9" refX="0" refY="3" orient="auto"><path d="M6.5,0 L0,3 L6.5,6 Z" fill="#9aa0a8"/></marker>
+      </defs>
+      <rect x="24" y="78" width="180" height="210" rx="14" fill="#eef0f2" stroke="#e2e5e8"/>
+      <text x="114" y="178" text-anchor="middle" font-family="sans-serif" font-size="17" font-weight="600" fill="#1a1c1f">Agent</text>
+      <text x="114" y="199" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#8b919c">Long-running loop</text>
+      <text x="267" y="120" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#8b919c">Run tools</text>
+      <line x1="206" y1="152" x2="326" y2="134" stroke="#9aa0a8" stroke-width="1.6" marker-start="url(#arL)" marker-end="url(#arR)"/>
+      <line x1="206" y1="216" x2="326" y2="300" stroke="#9aa0a8" stroke-width="1.6" marker-start="url(#arL)" marker-end="url(#arR)"/>
+      <rect x="330" y="72" width="290" height="150" rx="12" fill="#1b4b3c"/>
+      <text x="350" y="103" font-family="sans-serif" font-size="16" font-weight="600" fill="#ffffff">Marketplace tools</text>
+      <text x="350" y="133" font-family="sans-serif" font-size="13.5" fill="#a9cbbd">&#8226;&#160; Browse &amp; inspect jobs</text>
+      <text x="350" y="159" font-family="sans-serif" font-size="13.5" fill="#a9cbbd">&#8226;&#160; Negotiate price: accept &middot; bid &middot; decline</text>
+      <text x="350" y="185" font-family="sans-serif" font-size="13.5" fill="#a9cbbd">&#8226;&#160; Check balance &amp; in-progress work</text>
+      <rect x="330" y="240" width="290" height="118" rx="12" fill="#1b4b3c"/>
+      <text x="350" y="271" font-family="sans-serif" font-size="16" font-weight="600" fill="#ffffff">Delivery tools</text>
+      <text x="350" y="301" font-family="sans-serif" font-size="13.5" fill="#a9cbbd">&#8226;&#160; List coding-agent models</text>
+      <text x="350" y="327" font-family="sans-serif" font-size="13.5" fill="#a9cbbd">&#8226;&#160; Hire a model to deliver</text>
+      <line x1="620" y1="147" x2="666" y2="147" stroke="#9aa0a8" stroke-width="1.6" marker-start="url(#arL)" marker-end="url(#arR)"/>
+      <text x="674" y="143" font-family="sans-serif" font-size="14.5" fill="#1a1c1f">Job board</text>
+      <text x="674" y="162" font-family="sans-serif" font-size="14.5" fill="#1a1c1f">simulation</text>
+      <line x1="620" y1="299" x2="666" y2="299" stroke="#9aa0a8" stroke-width="1.6" marker-start="url(#arL)" marker-end="url(#arR)"/>
+      <text x="674" y="295" font-family="sans-serif" font-size="14.5" fill="#1a1c1f">Delivery</text>
+      <text x="674" y="314" font-family="sans-serif" font-size="14.5" fill="#1a1c1f">simulation</text>
+      <rect x="24" y="384" width="772" height="44" rx="10" fill="#e7f3ee"/>
+      <text x="44" y="411" font-family="sans-serif" font-size="16" font-weight="600" fill="#13402f">Scoring</text>
+      <circle cx="384" cy="406" r="11" fill="#e3b341"/>
+      <text x="384" y="411" text-anchor="middle" font-family="sans-serif" font-size="13" font-weight="700" fill="#5b3d05">$</text>
+      <text x="404" y="411" font-family="sans-serif" font-size="14" fill="#13402f">Money balance after 30 days &#160;&middot;&#160; + selection, pricing, tool choice</text>
+    </svg>
+  </div>
+  <p class="cap">The agent runs a long-running tool loop against a seeded job-board and stochastic delivery simulation; the headline score is the final money balance, decomposed into selection, pricing, and tool-choice capabilities.</p>
+
+  <h3>Agent implementation</h3>
+  <p><b>Context management:</b> Each turn, the agent sees the most recent slice of history that fits a 30,000-token budget. A naive sliding window drops the oldest message every turn, so the prompt's prefix changes constantly and the provider's prompt cache rarely hits (~10%), roughly tripling cost. We instead use an <b>anchored window</b>: we keep a fixed anchor into the history and trim only in large chunks when the budget is exceeded, so the prefix stays byte-stable for many turns and we pay a cache miss only at each chunk boundary (~every 50 turns). This held the cache-hit rate at ~88&ndash;95% across the full 30-day episode, cutting cost ~3&times;. The tradeoff: because we trim in chunks rather than one message at a time, the window carries slightly less history than a naive window would; we sacrifice a little context to keep the prefix cacheable.</p>
+  <p><b>Memory:</b> The agent is given read, write and delete access to two types of databases to compensate for the memory limitations: a scratchpad and key-value store.</p>
+  <p><b>Task-specific tools:</b>
+  <table class="tools">
+    <thead><tr><th>Group</th><th>Tools</th></tr></thead>
+    <tbody>
+      <tr><td>Discover</td><td><code>list_jobs</code> &middot; <code>inspect_job</code>
+      <tr><td>Negotiate</td><td><code>accept</code> &middot; <code>bid</code> &middot; <code>decline</code></td></tr>
+      <tr><td>Deliver</td><td><code>list_models</code> &middot; <code>submit</code></td></tr>
+      <tr><td>Bookkeeping + memory</td><td><code>check_balance</code> &middot; <code>list_in_progress</code> &middot; <code>mem_write/read/list/delete</code></td></tr>
+      <tr><td>Time</td><td><code>end_tick</code> &middot; <code>advance_to_next_event</code></td></tr>
+    </tbody>
+  </table>
+
+  <p><b>Agent system prompt:</b></p>
+  <div class="prompt">You run a tiny freelance services business in Solvent.
+
+Your goal is to maximize your final balance by the end of the episode. You are scored only on realized money in your balance; potential or unrealized profit does not count.
+
+Use one tool call at a time.
+
+Hidden ground truth is not available to you. Rely only on public job briefs and inputs, the public delivery-model menu, customer messages, your current balance, tool results, and your own recorded history.
+
+Jobs may arrive and expire over business time. Each job shows a visible starting_price (the client's posted offer) and has a hidden client ceiling. You may accept(job) to take it at starting_price, or bid(job, price) once to counter higher. If your counter is at or below the hidden ceiling, it is accepted at your price. If your counter is above the hidden ceiling, the counter is rejected and the starting_price offer stays open in awaiting_decision for you to accept or decline.
+
+An accepted job produces revenue only after successful delivery, and you get a single delivery attempt per job. To deliver, choose a delivery model from the public menu; models differ in cost and capability, and the model's charge applies whether or not the delivery passes.
+
+You have a persistent notebook (mem_write/mem_read/mem_list/mem_delete) that survives even when older messages scroll out of context.
+
+Calling end_tick advances business time. Advancing time, tool use, and delivery-model charges may affect your balance. The episode terminates when the horizon is reached or the business becomes insolvent.</div>
+
+  <h2>Results + Discussion</h2>
+  <p>I tested Deepseek-V3.2 vs Minimax-3. The results are from the average of 4 runs (each with a different seed).</p>
+
+  <h3>Money Balance Over Time</h3>
+  <div class="chartcard">
+    <div class="viewtoggle" data-chart="bal">
+      <button class="active" data-mode="avg">Average</button>
+      <button data-mode="all">All runs</button>
+    </div>
+    <div class="legend">
+      <span><span class="sw" style="background:#1d9e75"></span>deepseek-v3.2 (4 seeds)</span>
+      <span><span class="sw" style="border-top:3px dashed #d85a30;height:0"></span>minimax-m3 (4 seeds)</span>
+    </div>
+    <div class="chartwrap"><canvas id="balChart" role="img" aria-label="Average business balance over 30 days; deepseek ends around 15900 dollars, minimax around 12900, both from a 1000 dollar start."></canvas></div>
+  </div>
+
+  <h3>Score vs cost per run</h3>
+  <div class="chartcard">
+    <div class="viewtoggle" data-chart="sc">
+      <button class="active" data-mode="avg">Average</button>
+      <button data-mode="all">All runs</button>
+    </div>
+    <div class="legend">
+      <span><span class="dot" style="background:#1d9e75"></span>deepseek-v3.2</span>
+      <span><span class="tri" style="border-bottom:10px solid #d85a30"></span>minimax-m3</span>
+      <span style="color:var(--faint)">up-and-left = better</span>
+    </div>
+    <div class="chartwrap"><canvas id="scChart" role="img" aria-label="Scatter of ending balance after 30 days versus compute cost per run; deepseek ends higher (around 15900 dollars) at similar or lower cost than minimax (around 12900)."></canvas></div>
+  </div>
+
+  <h3>Other metrics we evaluated</h3>
+  <table class="metrics">
+    <thead><tr><th>Metric (mean of 4 seeds)</th><th class="n">deepseek-v3.2</th><th class="n">minimax-m3</th></tr></thead>
+    <tbody>
+      <tr class="grp first"><td colspan="3">Overall outcome</td></tr>
+      <tr><td>Net profit over 30 days</td><td class="n win">$14,937</td><td class="n">$11,937</td></tr>
+      <tr><td>Realized fraction of optimal <span class="info" data-tip="Net profit as a fraction of the clairvoyant optimum — the best profit achievable with full knowledge of arrivals, hidden ceilings, and the best delivery model — measured over the horizon the agent actually reached.">i</span></td><td class="n win">0.68</td><td class="n">0.55</td></tr>
+      <tr><td>Compute cost per run</td><td class="n win">$0.76</td><td class="n">$0.87</td></tr>
+      <tr class="grp"><td colspan="3">Problem selection &mdash; which jobs to take</td></tr>
+      <tr><td>Good jobs captured (recall) <span class="info" data-tip="Of all profitable jobs that arrived, the share the agent actually took on and delivered. Missing them means it let good work expire unhandled.">i</span></td><td class="n win">99.5%</td><td class="n">79.5%</td></tr>
+      <tr><td>Decoy avoidance (precision) <span class="info" data-tip="Of the jobs the agent accepted, the share that were genuinely profitable rather than money-losing decoys. 1.00 = it never accepted a decoy.">i</span></td><td class="n">1.00</td><td class="n">0.98</td></tr>
+      <tr class="grp"><td colspan="3">Pricing &mdash; capture surplus without overshooting</td></tr>
+      <tr><td>Avg price ratio (bid &divide; ceiling) <span class="info" data-tip="The accepted price as a fraction of the client&#39;s hidden ceiling, averaged over jobs. Higher captures more surplus; the omniscient optimum prices right at the ceiling (1.0).">i</span></td><td class="n">0.82</td><td class="n">0.79</td></tr>
+      <tr><td>Counter-offers landed <span class="info" data-tip="Counter-offers accepted out of counter-offers attempted (a counter is a price asked above the posted starting price). The rest overshot the hidden ceiling and were rejected.">i</span></td><td class="n win">94 / 94</td><td class="n">14 / 23</td></tr>
+      <tr class="grp"><td colspan="3">Tool selection &amp; resource allocation</td></tr>
+      <tr><td>Tool-selection quality (EV ratio) <span class="info" data-tip="Per delivery, the expected value of the model hired divided by the best model&#39;s expected value (job price &times; success-probability &minus; model price), using known pass rates. 1.0 = always picked the value-maximizing model. Scores the decision, not the luck.">i</span></td><td class="n">0.876</td><td class="n">0.866</td></tr>
+      <tr><td>Delivery pass rate <span class="note">(RNG-influenced)</span> <span class="info" data-tip="Share of deliveries that passed verification. Each hired model passes with a fixed probability, so a single run carries genuine luck; we average over seeds.">i</span></td><td class="n">0.80</td><td class="n">0.86</td></tr>
+    </tbody>
+  </table>
+  <p class="small">Pricing regret and tool-selection regret are reported per-job above (price ratio, EV ratio) rather than as absolute totals, because the absolute totals are confounded by volume &mdash; deepseek does more business, so its absolute regret is larger even where its per-job decisions are equal or better.</p>
+  <p class="small"><b>The high tool-selection EV ratio is forgiving, not earned.</b> Hidden job difficulty must be inferred, and both models pick the value-maximizing model only ~20&ndash;35% of the time; the ratio still lands near 0.87 because wrong picks are usually only mildly wrong. They err in opposite directions: deepseek economizes (and eats more delivery failures), while minimax avoids the mid tier almost entirely (tool-mid used 2&ndash;16&times;/run vs deepseek's 24&ndash;48&times;) and in some seeds defaults to the premium model on ~80% of even the easy jobs &mdash; a &ldquo;safety&rdquo; reflex it adopts after a failed delivery.</p>
+  <div class="trace"><span class="tlabel">trace &middot; minimax seed-140, just after a tool-mid delivery failed</span>
+    <span class="tq">&ldquo;&hellip;the failed delivery might just be bad luck or might indicate that capability 0.8 isn&rsquo;t enough for the cleaning task. Let me use tool-pro for safety.&rdquo;</span>
+    <div class="tline"><span class="tcall">&rarr; deliver(&hellip;, model=&quot;tool-pro&quot; &middot; $45)</span></div>
+  </div>
+
+  <h3>Qualitative findings</h3>
+
+  <ol>
+    <li><b>Minimax is lazier, which leads to worse job selection and pricing.</b> It accepts the default and lets opportunities lapse.
+      <ol type="a">
+        <li><b>Per-decision intelligence is essentially the same:</b> tool-selection quality is tied (EV ratio 0.876 vs 0.866) and per-job pricing differs only marginally (price ratio 0.82 vs 0.79).</li>
+        <li><b>The differences are operational:</b>
+          <ul>
+            <li><b>Engagement / throughput.</b> The same ~137 jobs arrive each run. deepseek <b>acts on every one</b> (≈95 accepted, ≈42 declined); minimax acts on only ~107 and lets <b>~30 jobs (including ~20 profitable ones) expire unhandled</b>. That missed work &mdash; not worse picks &mdash; is the entire recall gap (99.5% vs 79.5% of good jobs captured).
+              <div class="small" style="margin-top:6px">The most dramatic case is a cold-start <b>analysis-paralysis</b> (seed 140): minimax called <code>end_tick</code> <b>20 times in a row</b>, re-analyzing the same growing board each turn, before accepting its first job at day 2.1 &mdash; watching high-value jobs expire in real time (at turn 7 it noted dc-140-0 had &ldquo;only 48 minutes left!&rdquo; and still advanced). At turn 20 it finally caught itself:</div>
+              <div class="trace"><span class="tlabel">trace &middot; minimax seed-140, turn 20 (~day 2.1) &mdash; after 20 straight clock-advances</span>
+                <span class="tq">&ldquo;Wait, looking back at my prior actions &mdash; I kept advancing time without taking any jobs! That&rsquo;s a mistake. I need to start accepting jobs now.&rdquo;</span>
+                <div class="tline"><span class="tcall">&rarr; accept(dc-140-10)</span> &mdash; its first job, after several had already expired</div>
+              </div>
+            </li>
+            <li><b>Negotiation.</b> deepseek counters on nearly every job (94/95) and <b>lands every counter</b> (0 overshoots) &mdash; precise price discovery just under the hidden ceiling. minimax mostly just <b>accepts the posted floor</b> (64 times) and, on the rare counter, <b>overshoots ~40% of the time</b>. It&rsquo;s a mindset gap &mdash; deepseek actively reasons toward the ceiling, while minimax won&rsquo;t guess and plays it safe:
+              <div class="tracepair">
+                <div class="trace"><span class="tlabel">deepseek &middot; estimates the ceiling, then pushes</span>
+                  <span class="tq">&ldquo;The previous job had ceiling above 300 (my bid 300 accepted). This one might be lower. I&rsquo;ll bid 110 to test&hellip; if it&rsquo;s rejected, the starting price stays open.&rdquo;</span>
+                  <div class="tline"><span class="tcall">&rarr; bid($110)</span> &mdash; accepted, just under the ceiling</div>
+                </div>
+                <div class="trace"><span class="tlabel">minimax &middot; won&rsquo;t guess, takes the safe price</span>
+                  <span class="tq">&ldquo;I don&rsquo;t know the ceiling. Let me just accept at starting price. <b>Better to lock in known profit than gamble.</b>&rdquo;</span>
+                  <div class="tline"><span class="tcall">&rarr; declines to counter</span> &mdash; settles for the posted floor</div>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </li>
+      </ol>
+    </li>
+    <li><b>Deepseek is far more active with its tools.</b> It takes ~50% more actions per run (≈490&ndash;635 tool calls vs minimax's ≈320&ndash;420) and <b>inspects jobs before acting</b> (~100&times;/run vs minimax's 0), while minimax spends nearly half its turns just advancing the clock. That activity is what captures the jobs. It does carry a harmless side effect: deepseek logs ~7&times; more invalid actions (25/run vs 3.5), almost all <b>garbled job IDs</b> (e.g. <code>dc&mdash;140-12</code>) that it retries and recovers from for free &mdash; so the higher error count is a sign of engagement, not carelessness.</li>
+
+    <li><b>Both models systematically underprice.</b>
+      <ul>
+        <li>Both land around 0.80 of the client's hidden ceiling, leaving ~20% of each job's surplus uncaptured.</li>
+      </ul>
+      <div class="small">Bids anchor to the posted price and stay timid &mdash; the one-shot counter makes overshooting feel risky, so even deepseek nudges only a few percent:</div>
+      <div class="trace"><span class="tlabel">trace &middot; deepseek seed-142, pricing dc-142-0 (posted floor $237.21)</span>
+        <span class="tq">&ldquo;I could bid 250? 260?&hellip; if rejected, I can still accept at starting_price. So I can try a modest bid. Let&rsquo;s bid 250.00. That&rsquo;s ~5% increase&hellip; But note: I have only one counter per job.&rdquo;</span>
+        <div class="tline"><span class="tcall">&rarr; bid($250)</span> &mdash; a ~5% nudge; fear of the one-shot counter leaves most of the surplus on the table</div>
+      </div>
+    </li>
+  </ol>
+
+  <p class="note"><b>Caveat.</b> With 2 models &times; 4 seeds &times; 1 sample this is exploratory. The deepseek &gt; minimax ranking is unusually robust (4/4 paired seeds), but the throughput gap reflects how thoroughly each model engages the tool loop, which can be prompt-sensitive &mdash; so the more prompt-robust signal is per-decision quality (which is close). A natural follow-up is to probe whether minimax's passivity persists under a prompt nudge toward thorough engagement.</p>
+
+  <h2>Limitations/Next Steps</h2>
+
+  <h3>Environment Realism and New Features</h3>
+  <ul>
+    <li>Tasks could be more realistic, should mimic SWE-lancer</li>
+    <li>The coding agent options and their configurations (pass rate per task) for task delivery could be actual models instead of made up</li>
+    <li>Multi-player competition dynamics</li>
+    <li>Enable support/messaging evaluation: multi-turn negotiation, extra requests, discount messages, social engineering etc</li>
+    <li>Agents can take multiple tasks at once</li>
+    <li>Mock reputation score</li>
+  </ul>
+
+  <h3>Experiment Setup</h3>
+  <ul>
+    <li>Task pass rate introduces randomness to experiment results - should be mitigated with more runs</li>
+    <li>Longer time horizon (over 30 days)</li>
+    <li>Test frontier models</li>
+    <li>Multiple turns on same seed to measure same-seed model consistency</li>
+  </ul>
+
+</div>
+
+<script>
+const BAL=[{"m":"deepseek","s":"140","pts":[[0.0,1000],[0.8,1423],[1.8,2611],[3.3,3040],[4.5,3846],[5.8,4686],[6.6,5479],[7.7,5796],[9.5,6189],[11.9,6976],[12.7,7694],[14.4,8083],[16.6,8486],[17.9,9623],[18.3,10598],[19.3,11490],[20.9,12391],[22.0,13335],[23.3,14084],[23.8,15394],[24.4,15637],[24.8,17484],[26.3,18552],[27.0,18932],[28.3,19557],[29.0,20560],[30.0,20826]]},{"m":"deepseek","s":"141","pts":[[0.0,1000],[1.7,1542],[2.3,2123],[3.7,2500],[4.9,3189],[6.1,3769],[6.8,4702],[7.9,5371],[9.5,6045],[11.3,6572],[12.2,7398],[12.8,8066],[13.9,8784],[15.3,9203],[16.4,10107],[17.2,10937],[18.5,11443],[19.5,11892],[20.4,12606],[22.2,13448],[24.2,13882],[24.7,14397],[26.7,15046],[27.2,15645],[28.1,15902],[29.8,16127],[30.0,16200]]},{"m":"deepseek","s":"142","pts":[[0.0,1000],[0.8,1346],[1.6,1807],[3.4,2140],[3.8,2429],[4.8,3205],[5.4,3845],[5.8,4244],[7.3,4783],[8.6,5357],[9.6,5873],[11.0,6462],[12.1,6737],[13.2,7621],[14.1,8577],[14.6,9311],[16.0,9333],[17.4,9683],[18.4,10505],[20.0,11082],[21.1,11641],[22.3,11964],[23.1,12738],[24.4,13228],[26.4,13962],[29.8,14683],[30.0,14798]]},{"m":"deepseek","s":"143","pts":[[0.0,1000],[0.7,1566],[1.2,1825],[3.1,2274],[3.6,2802],[4.1,2945],[5.5,3444],[7.3,4399],[9.2,4517],[10.8,4731],[11.4,5275],[12.7,6110],[14.4,6066],[15.5,6586],[17.0,7295],[18.3,7824],[18.9,8239],[20.6,8718],[22.2,9372],[23.2,9686],[24.2,10282],[25.5,10499],[26.7,10451],[27.7,11147],[28.6,11738],[29.7,11925],[30.0,11923]]},{"m":"minimax","s":"140","pts":[[0.0,1000],[2.0,980],[3.5,953],[5.0,1391],[5.8,1892],[6.9,2462],[7.6,3168],[8.5,3857],[11.7,4258],[12.2,4614],[14.1,5365],[14.8,5924],[17.0,6272],[18.0,7122],[18.5,8242],[19.3,8844],[20.9,9041],[21.6,9885],[23.2,10546],[23.6,11720],[24.2,12139],[24.7,12789],[25.4,13839],[26.7,14514],[28.1,14498],[29.8,14481],[30.0,14854]]},{"m":"minimax","s":"141","pts":[[0.0,1000],[1.9,1269],[3.3,1253],[4.7,1750],[5.2,2385],[6.2,2947],[7.0,3731],[8.7,4165],[9.9,4927],[11.3,5262],[12.5,6222],[13.4,6740],[14.1,7341],[15.9,7820],[16.5,8682],[17.5,9572],[19.0,9971],[19.5,10848],[20.7,11598],[22.2,12010],[24.3,12518],[25.7,12893],[26.7,13516],[28.1,13773],[29.1,13982],[29.8,14242],[30.0,14240]]},{"m":"minimax","s":"142","pts":[[0.0,1000],[0.8,1314],[2.7,1296],[3.5,1645],[5.2,1628],[5.9,1620],[6.4,2102],[7.7,2379],[8.3,2849],[9.5,3421],[10.5,3795],[11.4,4114],[12.4,4488],[13.3,5649],[14.2,6172],[15.4,6533],[16.4,6804],[17.5,6791],[19.1,7350],[20.8,7773],[21.5,8382],[22.6,8486],[23.3,9201],[24.4,9683],[26.4,10283],[29.3,10886],[30.0,11288]]},{"m":"minimax","s":"143","pts":[[0.0,1000],[0.8,1620],[2.2,1844],[3.3,2211],[3.8,2571],[6.3,2545],[7.9,3313],[9.5,3641],[10.8,3770],[11.3,4463],[12.6,5182],[13.7,5404],[14.8,5543],[16.2,6102],[17.1,6785],[18.3,7420],[19.0,7763],[20.7,8365],[22.2,8833],[23.2,9067],[24.6,9176],[25.5,9568],[27.1,9579],[27.7,10495],[28.6,11220],[29.7,11371],[30.0,11366]]}];
+const SCA=[{"m":"deepseek","s":"140","cost":0.91,"score":0.742,"net":19826},{"m":"deepseek","s":"141","cost":0.831,"score":0.652,"net":15200},{"m":"deepseek","s":"142","cost":0.664,"score":0.724,"net":13798},{"m":"deepseek","s":"143","cost":0.653,"score":0.611,"net":10923},{"m":"minimax","s":"140","cost":0.969,"score":0.518,"net":13854},{"m":"minimax","s":"141","cost":0.985,"score":0.568,"net":13240},{"m":"minimax","s":"142","cost":0.747,"score":0.54,"net":10288},{"m":"minimax","s":"143","cost":0.789,"score":0.58,"net":10366}];
+const COL={deepseek:'#1d9e75',minimax:'#d85a30'};
+const MODELS=['deepseek','minimax'];
+function interp(pts,x){if(x<=pts[0][0])return pts[0][1];for(let i=1;i<pts.length;i++){if(x<=pts[i][0]){const a=pts[i-1],b=pts[i];return b[0]===a[0]?b[1]:a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0]);}}return pts[pts.length-1][1];}
+function avgCurve(m){const cs=BAL.filter(c=>c.m===m),o=[];for(let d=0;d<=30;d+=0.5){let s=0;cs.forEach(c=>s+=interp(c.pts,d));o.push({x:d,y:Math.round(s/cs.length)});}return o;}
+function balDatasets(mode){
+  if(mode==='avg')return MODELS.map(m=>({label:m+' (avg of 4)',data:avgCurve(m),borderColor:COL[m],borderDash:m==='minimax'?[6,4]:[],borderWidth:2.8,pointRadius:0,tension:0.2}));
+  return BAL.map(c=>({label:c.m+'-'+c.s,data:c.pts.map(p=>({x:p[0],y:p[1]})),borderColor:COL[c.m],borderDash:c.m==='minimax'?[5,4]:[],borderWidth:1.3,pointRadius:0,tension:0.15}));
+}
+const balChart=new Chart(document.getElementById('balChart'),{type:'line',data:{datasets:balDatasets('avg')},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>'day '+i[0].parsed.x.toFixed(1),label:i=>i.dataset.label+': $'+Math.round(i.parsed.y).toLocaleString()}}},scales:{x:{type:'linear',min:0,max:30,title:{display:true,text:'simulated day'},ticks:{stepSize:5}},y:{title:{display:true,text:'balance ($)'},ticks:{callback:v=>'$'+(v/1000)+'k'}}}}});
+
+const END=SCA.map(p=>({m:p.m,s:p.s,cost:p.cost,bal:1000+p.net}));
+function scDatasets(mode){
+  if(mode==='avg')return MODELS.map(m=>{const cs=END.filter(p=>p.m===m);const ax=cs.reduce((s,p)=>s+p.cost,0)/cs.length,ay=cs.reduce((s,p)=>s+p.bal,0)/cs.length;return {label:m+' (avg)',data:[{x:ax,y:ay,seed:'avg'}],backgroundColor:COL[m],pointStyle:m==='deepseek'?'circle':'triangle',pointRadius:14,pointHoverRadius:16};});
+  return MODELS.map(m=>({label:m,data:END.filter(p=>p.m===m).map(p=>({x:p.cost,y:p.bal,seed:p.s})),backgroundColor:COL[m],pointStyle:m==='deepseek'?'circle':'triangle',pointRadius:8,pointHoverRadius:10}));
+}
+const scChart=new Chart(document.getElementById('scChart'),{type:'scatter',data:{datasets:scDatasets('avg')},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:i=>i.dataset.label+(i.raw.seed!=='avg'?'-'+i.raw.seed:'')+': $'+Math.round(i.raw.y).toLocaleString()+' ending, $'+i.raw.x.toFixed(2)+' cost'}}},scales:{x:{min:0.6,max:1.05,title:{display:true,text:'compute cost per run ($)'}},y:{min:10000,max:22000,title:{display:true,text:'ending balance ($)'},ticks:{callback:v=>'$'+(v/1000)+'k'}}}}});
+
+document.querySelectorAll('.viewtoggle').forEach(tg=>tg.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+  tg.querySelectorAll('button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+  const mode=b.dataset.mode;
+  if(tg.dataset.chart==='bal'){balChart.data.datasets=balDatasets(mode);balChart.update();}
+  else{scChart.data.datasets=scDatasets(mode);scChart.update();}
+})));
+</script>
+</body>
+</html>
