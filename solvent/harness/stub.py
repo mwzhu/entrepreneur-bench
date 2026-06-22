@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from solvent.env.errors import InvalidActionError
 from solvent.env.env import Environment
-from solvent.env.models import JobPublic
+from solvent.env.tool_api import ToolAdapter
 from solvent.tasks.data_clean import build_clean_csv
 
 
@@ -28,33 +27,36 @@ class StubHarness:
         self.mode = mode
 
     def run(self, env: Environment) -> None:
+        api = ToolAdapter(env)
         if self.mode == "invalid_loop":
-            self._run_invalid_loop(env)
+            self._run_invalid_loop(env, api)
             return
         single_job_modes = {"happy_path", "bad_delivery"}
         attempted_single_job = False
         completed: set[str] = set()
         while not env.terminated():
-            jobs = env.list_jobs()
+            jobs = api.dispatch({"name": "list_jobs", "arguments": {}})["result"]
             if self.mode in single_job_modes and attempted_single_job:
                 jobs = []
             for public_job in jobs:
-                if public_job.id in completed:
+                if public_job["id"] in completed:
                     continue
                 if self.mode == "procedure" and self._looks_like_public_decoy(public_job):
                     continue
-                job = env.inspect_job(public_job.id)
-                bid_result = env.bid(job.id, self._bid_price())
-                completed.add(job.id)
+                job = api.dispatch({"name": "inspect_job", "arguments": {"job_id": public_job["id"]}})["result"]
+                bid_result = api.dispatch(
+                    {"name": "bid", "arguments": {"job_id": job["id"], "price": str(self._bid_price())}}
+                )["result"]
+                completed.add(job["id"])
                 attempted_single_job = True
                 if bid_result["accepted"]:
-                    self._handle_manipulation(env, job.id, bid_result.get("manipulation"))
-                    artifact = self._artifact_for(job.inputs["csv"])
-                    env.submit(job.id, artifact)
+                    self._handle_manipulation(api, job["id"], bid_result.get("manipulation"))
+                    artifact = self._artifact_for(job["inputs"]["csv"])
+                    api.dispatch({"name": "submit", "arguments": {"job_id": job["id"], "artifact": artifact}})
                 if self.mode in single_job_modes:
                     break
             if not env.terminated():
-                env.end_tick()
+                api.dispatch({"name": "end_tick", "arguments": {}})
 
     def _artifact_for(self, raw_csv: str) -> str:
         if self.mode == "bad_delivery":
@@ -68,31 +70,25 @@ class StubHarness:
             return Decimal("1.00")
         return Decimal("0.50")
 
-    def _handle_manipulation(self, env: Environment, job_id: str, manipulation: dict | None) -> None:
+    def _handle_manipulation(self, api: ToolAdapter, job_id: str, manipulation: dict | None) -> None:
         if manipulation is None:
             return
         if self.mode == "naive":
-            env.respond(job_id, "discount")
+            api.dispatch({"name": "respond", "arguments": {"job_id": job_id, "decision": "discount"}})
         else:
-            env.respond(job_id, "hold_price")
+            api.dispatch({"name": "respond", "arguments": {"job_id": job_id, "decision": "hold_price"}})
 
-    def _looks_like_public_decoy(self, job: JobPublic) -> bool:
-        return "budget is extremely limited" in job.brief.lower()
+    def _looks_like_public_decoy(self, job: dict) -> bool:
+        return "budget is extremely limited" in job["brief"].lower()
 
-    def _run_invalid_loop(self, env: Environment) -> None:
+    def _run_invalid_loop(self, env: Environment, api: ToolAdapter) -> None:
         while not env.terminated():
-            jobs = env.list_jobs()
+            jobs = api.dispatch({"name": "list_jobs", "arguments": {}})["result"]
             if jobs:
-                job = env.inspect_job(jobs[0].id)
-                try:
-                    env.bid(job.id, Decimal("0.50"))
-                except InvalidActionError:
-                    pass
+                job = api.dispatch({"name": "inspect_job", "arguments": {"job_id": jobs[0]["id"]}})["result"]
+                api.dispatch({"name": "bid", "arguments": {"job_id": job["id"], "price": "0.50"}})
                 for _ in range(3):
-                    try:
-                        env.bid(job.id, Decimal("0.01"))
-                    except InvalidActionError:
-                        pass
+                    api.dispatch({"name": "bid", "arguments": {"job_id": job["id"], "price": "0.01"}})
                 return
             if not env.terminated():
-                env.end_tick()
+                api.dispatch({"name": "end_tick", "arguments": {}})

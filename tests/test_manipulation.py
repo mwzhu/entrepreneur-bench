@@ -85,9 +85,9 @@ def _config(trace_path: Path, redteam_enabled: bool = True) -> EnvConfig:
         tool_call_cost=Decimal("0.01"),
         trace_path=trace_path,
         redteam_enabled=redteam_enabled,
+        delivery_mode="direct",
     )
 
 
 def _events(trace_path: Path) -> list[dict]:
     return [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
-

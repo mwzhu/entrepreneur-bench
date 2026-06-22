@@ -7,6 +7,7 @@ from decimal import Decimal
 from solvent.env.errors import UnknownJobError
 from solvent.env.models import Job, ManipulationEvent
 from solvent.tasks.data_clean import generate_data_clean_job
+from solvent.tasks.extract import generate_extract_job
 
 
 class Market:
@@ -17,23 +18,42 @@ class Market:
         seed: int,
         version: str = "data_clean_static_v0_2",
         market_size: int = 5,
+        horizon_minutes: int | None = None,
+        arrival_rate_per_day: Decimal = Decimal("1.00"),
+        job_ttl_minutes: int | None = None,
         decoy_rate: Decimal = Decimal("0.40"),
         redteam_enabled: bool = False,
+        task_mix: dict[str, float] | None = None,
+        difficulty_distribution: dict[str, float] | None = None,
     ):
         self.seed = seed
         self.version = version
         self.market_size = market_size
+        self.horizon_minutes = horizon_minutes
+        self.arrival_rate_per_day = arrival_rate_per_day
+        self.job_ttl_minutes = job_ttl_minutes
         self.decoy_rate = decoy_rate
         self.redteam_enabled = redteam_enabled
+        self.task_mix = task_mix or {"data_clean": 1.0}
+        self.difficulty_distribution = difficulty_distribution or {"easy": 1.0}
         if version == "data_clean_static_v0_1":
             self._jobs = [generate_data_clean_job(seed, index) for index in range(3)]
         elif version == "data_clean_static_v0_2":
             self._jobs = self._generate_v0_2_jobs()
+        elif version == "business_stream_v0_5":
+            self._jobs = self._generate_stream_jobs()
         else:
             raise ValueError(f"unknown market version: {version}")
         self._jobs_by_id = {job.id: job for job in self._jobs}
 
-    def available_jobs(self, tick: int) -> list[Job]:
+    def available_jobs(self, tick: int, business_time: bool = False) -> list[Job]:
+        if business_time:
+            return [
+                job
+                for job in self._jobs
+                if (job.arrival_minute if job.arrival_minute is not None else job.arrival_tick) <= tick
+                and (job.expiry_minute is None or tick < job.expiry_minute)
+            ]
         return [job for job in self._jobs if job.arrival_tick <= tick]
 
     def all_jobs(self) -> list[Job]:
@@ -50,7 +70,9 @@ class Market:
         manipulation_index = self._manipulation_index(decoy_indices)
         jobs = []
         for index in range(self.market_size):
-            base = generate_data_clean_job(self.seed, index)
+            task_type = self._sample_weighted(self.task_mix, f"{self.seed}:{index}:task-type")
+            difficulty = self._sample_weighted(self.difficulty_distribution, f"{self.seed}:{index}:difficulty")
+            base = self._generate_job(task_type, index, difficulty)
             is_decoy = index in decoy_indices
             rng = random.Random(f"{self.seed}:{index}:market-v0.2")
             if is_decoy:
@@ -79,6 +101,47 @@ class Market:
                 )
             )
         return jobs
+
+    def _generate_stream_jobs(self) -> list[Job]:
+        horizon = self.horizon_minutes or max(1, self.market_size)
+        expected_jobs = max(1, int(round(float(self.arrival_rate_per_day) * horizon / 1440)))
+        self.market_size = expected_jobs
+        ttl = self.job_ttl_minutes if self.job_ttl_minutes is not None else max(60, min(1440, horizon))
+        jobs = []
+        for index, job in enumerate(self._generate_v0_2_jobs()):
+            arrival = min(horizon - 1, int(index * horizon / expected_jobs))
+            expiry = min(horizon, arrival + ttl)
+            jobs.append(
+                replace(
+                    job,
+                    arrival_tick=arrival,
+                    arrival_minute=arrival,
+                    expiry_minute=expiry,
+                )
+            )
+        return jobs
+
+    def _generate_job(self, task_type: str, index: int, difficulty: str) -> Job:
+        if task_type == "data_clean":
+            return generate_data_clean_job(self.seed, index, difficulty)
+        if task_type == "extract":
+            return generate_extract_job(self.seed, index, difficulty)
+        raise ValueError(f"unknown task type: {task_type}")
+
+    def _sample_weighted(self, weights: dict[str, float], key: str) -> str:
+        if not weights:
+            raise ValueError("weighted distribution cannot be empty")
+        rng = random.Random(key)
+        total = sum(float(weight) for weight in weights.values())
+        if total <= 0:
+            raise ValueError("weighted distribution must have positive mass")
+        draw = rng.random() * total
+        cumulative = 0.0
+        for value, weight in sorted(weights.items()):
+            cumulative += float(weight)
+            if draw <= cumulative:
+                return value
+        return sorted(weights)[-1]
 
     def _decoy_indices(self) -> set[int]:
         if self.market_size <= 0:

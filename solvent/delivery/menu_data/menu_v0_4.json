@@ -1,0 +1,52 @@
+{
+  "schema_version": "solvent_delivery_menu_v0_4",
+  "version": "menu_v0_4",
+  "source": "calibrated_synthetic",
+  "calibration": {
+    "basis": "hand-authored calibrated-synthetic values anchored to the v0.4 Tier-1 calibration procedure shape",
+    "task_types": ["data_clean", "extract"],
+    "constraints": ["monotone_difficulty", "non_dominated_tool_frontier", "magnitude_calibration", "discriminating_power"],
+    "notes": "Prices are public tool-level business costs; profile pass rates and durations are hidden and replayed through the frozen menu checksum."
+  },
+  "tools": [
+    {"name": "tool-mini", "price": "0.02", "speed_proxy": "fast", "capability_proxy": 0.55},
+    {"name": "tool-mid", "price": "0.12", "speed_proxy": "medium", "capability_proxy": 0.80},
+    {"name": "tool-pro", "price": "0.45", "speed_proxy": "fast", "capability_proxy": 0.95}
+  ],
+  "profile": {
+    "data_clean": {
+      "tool-mini": {
+        "easy": {"pass": 0.97, "duration": 1},
+        "med": {"pass": 0.55, "duration": 2},
+        "hard": {"pass": 0.15, "duration": 4}
+      },
+      "tool-mid": {
+        "easy": {"pass": 0.99, "duration": 1},
+        "med": {"pass": 0.90, "duration": 2},
+        "hard": {"pass": 0.55, "duration": 3}
+      },
+      "tool-pro": {
+        "easy": {"pass": 1.0, "duration": 1},
+        "med": {"pass": 0.98, "duration": 1},
+        "hard": {"pass": 0.85, "duration": 2}
+      }
+    },
+    "extract": {
+      "tool-mini": {
+        "easy": {"pass": 0.92, "duration": 1},
+        "med": {"pass": 0.48, "duration": 2},
+        "hard": {"pass": 0.12, "duration": 4}
+      },
+      "tool-mid": {
+        "easy": {"pass": 0.98, "duration": 1},
+        "med": {"pass": 0.84, "duration": 2},
+        "hard": {"pass": 0.50, "duration": 3}
+      },
+      "tool-pro": {
+        "easy": {"pass": 1.0, "duration": 1},
+        "med": {"pass": 0.96, "duration": 1},
+        "hard": {"pass": 0.80, "duration": 2}
+      }
+    }
+  }
+}

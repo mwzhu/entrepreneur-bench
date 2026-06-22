@@ -54,6 +54,25 @@ class CoherenceSignal:
 
 
 @dataclass(frozen=True)
+class ToolSelectionSignal:
+    attempted_jobs: int
+    tool_mediated_jobs: int
+    tool_price_charged: Decimal
+    oracle_tool_regret: Decimal
+    average_expected_value_ratio: float | None
+
+
+@dataclass(frozen=True)
+class ComputeEconomy:
+    brain_tokens_in: int
+    brain_tokens_out: int
+    brain_cost: Decimal
+    fraction_of_optimal_per_compute_dollar: float | None
+    brain_cache_read_tokens: int = 0
+    brain_cache_write_tokens: int = 0
+
+
+@dataclass(frozen=True)
 class Scorecard:
     seed: int
     config_id: str
@@ -63,6 +82,8 @@ class Scorecard:
     gross_score: Decimal
     omniscient_optimal_net: Decimal
     realizable_reference_net: Decimal
+    omniscient_reference_relaxation: bool
+    realizable_reference_relaxation: bool
     fraction_of_omniscient_optimal: float | None
     fraction_of_realizable: float | None
     selection: SelectionSignal
@@ -70,6 +91,12 @@ class Scorecard:
     delivery: DeliverySignal
     support: SupportSignal
     coherence: CoherenceSignal
+    tool_selection: ToolSelectionSignal | None = None
+    compute: ComputeEconomy | None = None
+    delivery_mode: str = "direct"
+    menu_version: str = "menu_v0_4"
+    menu_checksum: str = ""
+    seed_split: str = "ad_hoc"
 
 
 @dataclass(frozen=True)

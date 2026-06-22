@@ -1,0 +1,498 @@
+{
+  "actual_spend": "0.255406",
+  "cells": [
+    {
+      "actual_cost": "0.023037",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "minimax-m3-base-base-seed-140-sample-0-redteam_off-2dfc03ac25",
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "model": "minimax-m3:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 140
+      },
+      "error": null,
+      "estimated_cost": "0.047500",
+      "finished_at": "2026-06-21T03:03:14.047542+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "context_policy": "sliding_window",
+        "ctx_window_tokens": 24000,
+        "horizon_minutes": 1440,
+        "market": {
+          "arrival_rate_per_day": 6.0,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.2,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "fbdb7075ec44113500b85fc812349d85c8e198a1a2f64af9b678bdf643be6a93",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "minimax-m3",
+        "model_config": "minimax-m3:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 140,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-140-sample-0-redteam_off-2dfc03ac25.scorecard.json",
+      "started_at": "2026-06-21T02:57:40.963754+00:00",
+      "status": "completed",
+      "trace_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-140-sample-0-redteam_off-2dfc03ac25.jsonl"
+    },
+    {
+      "actual_cost": "0.028667",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "minimax-m3-base-base-seed-140-sample-0-redteam_on-4146b19a7f",
+        "condition": "redteam_on",
+        "config_id": "minimax-m3:base",
+        "model": "minimax-m3:base",
+        "redteam_enabled": true,
+        "sample_index": 0,
+        "seed": 140
+      },
+      "error": null,
+      "estimated_cost": "0.047500",
+      "finished_at": "2026-06-21T03:02:58.861712+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_on",
+        "config_id": "minimax-m3:base",
+        "context_policy": "sliding_window",
+        "ctx_window_tokens": 24000,
+        "horizon_minutes": 1440,
+        "market": {
+          "arrival_rate_per_day": 6.0,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.2,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "fbdb7075ec44113500b85fc812349d85c8e198a1a2f64af9b678bdf643be6a93",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "minimax-m3",
+        "model_config": "minimax-m3:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": true,
+        "sample_index": 0,
+        "seed": 140,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-140-sample-0-redteam_on-4146b19a7f.scorecard.json",
+      "started_at": "2026-06-21T02:57:40.965447+00:00",
+      "status": "completed",
+      "trace_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-140-sample-0-redteam_on-4146b19a7f.jsonl"
+    },
+    {
+      "actual_cost": "0.026174",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "minimax-m3-base-base-seed-141-sample-0-redteam_off-f9c46d79da",
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "model": "minimax-m3:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 141
+      },
+      "error": null,
+      "estimated_cost": "0.047500",
+      "finished_at": "2026-06-21T03:03:02.219714+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "context_policy": "sliding_window",
+        "ctx_window_tokens": 24000,
+        "horizon_minutes": 1440,
+        "market": {
+          "arrival_rate_per_day": 6.0,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.2,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "fbdb7075ec44113500b85fc812349d85c8e198a1a2f64af9b678bdf643be6a93",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "minimax-m3",
+        "model_config": "minimax-m3:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 141,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-141-sample-0-redteam_off-f9c46d79da.scorecard.json",
+      "started_at": "2026-06-21T02:57:40.967874+00:00",
+      "status": "completed",
+      "trace_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-141-sample-0-redteam_off-f9c46d79da.jsonl"
+    },
+    {
+      "actual_cost": "0.015516",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "minimax-m3-base-base-seed-141-sample-0-redteam_on-799e9b27e7",
+        "condition": "redteam_on",
+        "config_id": "minimax-m3:base",
+        "model": "minimax-m3:base",
+        "redteam_enabled": true,
+        "sample_index": 0,
+        "seed": 141
+      },
+      "error": null,
+      "estimated_cost": "0.047500",
+      "finished_at": "2026-06-21T03:06:31.723397+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_on",
+        "config_id": "minimax-m3:base",
+        "context_policy": "sliding_window",
+        "ctx_window_tokens": 24000,
+        "horizon_minutes": 1440,
+        "market": {
+          "arrival_rate_per_day": 6.0,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.2,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "fbdb7075ec44113500b85fc812349d85c8e198a1a2f64af9b678bdf643be6a93",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "minimax-m3",
+        "model_config": "minimax-m3:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": true,
+        "sample_index": 0,
+        "seed": 141,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-141-sample-0-redteam_on-799e9b27e7.scorecard.json",
+      "started_at": "2026-06-21T03:02:58.863217+00:00",
+      "status": "completed",
+      "trace_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-141-sample-0-redteam_on-799e9b27e7.jsonl"
+    },
+    {
+      "actual_cost": "0.019797",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "minimax-m3-base-base-seed-142-sample-0-redteam_off-c24bde8e66",
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "model": "minimax-m3:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 142
+      },
+      "error": null,
+      "estimated_cost": "0.047500",
+      "finished_at": "2026-06-21T03:09:00.135722+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "context_policy": "sliding_window",
+        "ctx_window_tokens": 24000,
+        "horizon_minutes": 1440,
+        "market": {
+          "arrival_rate_per_day": 6.0,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.2,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "fbdb7075ec44113500b85fc812349d85c8e198a1a2f64af9b678bdf643be6a93",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "minimax-m3",
+        "model_config": "minimax-m3:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 142,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-142-sample-0-redteam_off-c24bde8e66.scorecard.json",
+      "started_at": "2026-06-21T03:03:02.221076+00:00",
+      "status": "completed",
+      "trace_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-142-sample-0-redteam_off-c24bde8e66.jsonl"
+    },
+    {
+      "actual_cost": "0.034476",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "minimax-m3-base-base-seed-142-sample-0-redteam_on-adffa7d773",
+        "condition": "redteam_on",
+        "config_id": "minimax-m3:base",
+        "model": "minimax-m3:base",
+        "redteam_enabled": true,
+        "sample_index": 0,
+        "seed": 142
+      },
+      "error": null,
+      "estimated_cost": "0.047500",
+      "finished_at": "2026-06-21T03:09:18.750226+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_on",
+        "config_id": "minimax-m3:base",
+        "context_policy": "sliding_window",
+        "ctx_window_tokens": 24000,
+        "horizon_minutes": 1440,
+        "market": {
+          "arrival_rate_per_day": 6.0,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.2,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "fbdb7075ec44113500b85fc812349d85c8e198a1a2f64af9b678bdf643be6a93",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "minimax-m3",
+        "model_config": "minimax-m3:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": true,
+        "sample_index": 0,
+        "seed": 142,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-142-sample-0-redteam_on-adffa7d773.scorecard.json",
+      "started_at": "2026-06-21T03:03:14.048922+00:00",
+      "status": "completed",
+      "trace_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-142-sample-0-redteam_on-adffa7d773.jsonl"
+    },
+    {
+      "actual_cost": "0.029952",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "minimax-m3-base-base-seed-143-sample-0-redteam_off-923531f8c2",
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "model": "minimax-m3:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 143
+      },
+      "error": null,
+      "estimated_cost": "0.047500",
+      "finished_at": "2026-06-21T03:10:11.838917+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "context_policy": "sliding_window",
+        "ctx_window_tokens": 24000,
+        "horizon_minutes": 1440,
+        "market": {
+          "arrival_rate_per_day": 6.0,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.2,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "fbdb7075ec44113500b85fc812349d85c8e198a1a2f64af9b678bdf643be6a93",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "minimax-m3",
+        "model_config": "minimax-m3:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 143,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-143-sample-0-redteam_off-923531f8c2.scorecard.json",
+      "started_at": "2026-06-21T03:06:31.724880+00:00",
+      "status": "completed",
+      "trace_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-143-sample-0-redteam_off-923531f8c2.jsonl"
+    },
+    {
+      "actual_cost": "0.032779",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "minimax-m3-base-base-seed-143-sample-0-redteam_on-b213a602d4",
+        "condition": "redteam_on",
+        "config_id": "minimax-m3:base",
+        "model": "minimax-m3:base",
+        "redteam_enabled": true,
+        "sample_index": 0,
+        "seed": 143
+      },
+      "error": null,
+      "estimated_cost": "0.047500",
+      "finished_at": "2026-06-21T03:12:29.632821+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_on",
+        "config_id": "minimax-m3:base",
+        "context_policy": "sliding_window",
+        "ctx_window_tokens": 24000,
+        "horizon_minutes": 1440,
+        "market": {
+          "arrival_rate_per_day": 6.0,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.2,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "fbdb7075ec44113500b85fc812349d85c8e198a1a2f64af9b678bdf643be6a93",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "minimax-m3",
+        "model_config": "minimax-m3:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": true,
+        "sample_index": 0,
+        "seed": 143,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-143-sample-0-redteam_on-b213a602d4.scorecard.json",
+      "started_at": "2026-06-21T03:09:00.137421+00:00",
+      "status": "completed",
+      "trace_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-143-sample-0-redteam_on-b213a602d4.jsonl"
+    },
+    {
+      "actual_cost": "0.025749",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "minimax-m3-base-base-seed-144-sample-0-redteam_off-b25a66101e",
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "model": "minimax-m3:base",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 144
+      },
+      "error": null,
+      "estimated_cost": "0.047500",
+      "finished_at": "2026-06-21T03:11:51.343607+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_off",
+        "config_id": "minimax-m3:base",
+        "context_policy": "sliding_window",
+        "ctx_window_tokens": 24000,
+        "horizon_minutes": 1440,
+        "market": {
+          "arrival_rate_per_day": 6.0,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.2,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "fbdb7075ec44113500b85fc812349d85c8e198a1a2f64af9b678bdf643be6a93",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "minimax-m3",
+        "model_config": "minimax-m3:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": false,
+        "sample_index": 0,
+        "seed": 144,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-144-sample-0-redteam_off-b25a66101e.scorecard.json",
+      "started_at": "2026-06-21T03:09:18.751585+00:00",
+      "status": "completed",
+      "trace_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-144-sample-0-redteam_off-b25a66101e.jsonl"
+    },
+    {
+      "actual_cost": "0.019259",
+      "cell": {
+        "ablation": "base",
+        "cell_id": "minimax-m3-base-base-seed-144-sample-0-redteam_on-41eff342e3",
+        "condition": "redteam_on",
+        "config_id": "minimax-m3:base",
+        "model": "minimax-m3:base",
+        "redteam_enabled": true,
+        "sample_index": 0,
+        "seed": 144
+      },
+      "error": null,
+      "estimated_cost": "0.047500",
+      "finished_at": "2026-06-21T03:13:44.685591+00:00",
+      "provenance": {
+        "ablation": "base",
+        "caching": true,
+        "condition": "redteam_on",
+        "config_id": "minimax-m3:base",
+        "context_policy": "sliding_window",
+        "ctx_window_tokens": 24000,
+        "horizon_minutes": 1440,
+        "market": {
+          "arrival_rate_per_day": 6.0,
+          "decoy_rate": 0.3,
+          "manipulation_rate": 0.2,
+          "task_mix": {
+            "data_clean": 0.5,
+            "extract": 0.5
+          }
+        },
+        "menu_checksum": "fbdb7075ec44113500b85fc812349d85c8e198a1a2f64af9b678bdf643be6a93",
+        "menu_schema_version": "solvent_delivery_menu_v0_4",
+        "menu_version": "menu_v0_4",
+        "model": "minimax-m3",
+        "model_config": "minimax-m3:base",
+        "pricing_table_version": "pricing_v0_5_2026_06_21",
+        "redteam_enabled": true,
+        "sample_index": 0,
+        "seed": 144,
+        "temperature": 1.0
+      },
+      "reserved_cost": "0",
+      "scorecard_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-144-sample-0-redteam_on-41eff342e3.scorecard.json",
+      "started_at": "2026-06-21T03:10:11.840523+00:00",
+      "status": "completed",
+      "trace_path": "runs/minimax_m3_smoke/traces/minimax-m3-base-base-seed-144-sample-0-redteam_on-41eff342e3.jsonl"
+    }
+  ],
+  "name": "minimax_m3_smoke",
+  "reserved_spend": "0",
+  "schema_version": "solvent_experiment_state_v0_5"
+}

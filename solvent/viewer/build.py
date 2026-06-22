@@ -39,24 +39,30 @@ def build_viewer(trace_dir: Path, summary: dict[str, Any], runs: list[RunArtifac
 def _manifest(trace_dir: Path, summary: dict[str, Any], runs: list[RunArtifact]) -> dict[str, Any]:
     configs = []
     seeds = []
+    samples = []
     for run in runs:
         if run.config_id not in configs:
             configs.append(run.config_id)
         if run.seed not in seeds:
             seeds.append(run.seed)
+        if run.sample_index not in samples:
+            samples.append(run.sample_index)
     return {
-        "schema_version": "solvent_demo_v0_3",
+        "schema_version": "solvent_demo_v0_4",
         "created_by": f"solvent {__version__}",
         "summary_path": "summary.json",
         "viewer_entry": "viewer/index.html",
         "configs": configs,
         "seeds": sorted(seeds),
+        "samples": sorted(samples),
         "redteam_paired": any(run.redteam_enabled for run in runs),
         "runs": [
             {
                 "key": _run_key(run),
                 "config_id": run.config_id,
+                "cell_id": run.cell_id,
                 "seed": run.seed,
+                "sample_index": run.sample_index,
                 "redteam_enabled": run.redteam_enabled,
                 "trace_path": _relative_path(run.trace_path, trace_dir),
                 "scorecard_path": _relative_path(run.scorecard_path, trace_dir),
@@ -83,7 +89,8 @@ def _view_filename(run: RunArtifact) -> str:
 def _run_key(run: RunArtifact) -> str:
     config = run.config_id.replace(":", "-")
     redteam = "redteam-on" if run.redteam_enabled else "redteam-off"
-    return f"seed-{run.seed}-{config}-{redteam}"
+    sample = f"-sample-{run.sample_index}" if run.sample_index else ""
+    return f"seed-{run.seed}{sample}-{config}-{redteam}"
 
 
 def _relative_path(path: Path, root_dir: Path) -> str:

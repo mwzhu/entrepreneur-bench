@@ -15,10 +15,37 @@ class EnvConfig:
     overhead_per_tick: Decimal
     tool_call_cost: Decimal
     trace_path: Path
+    horizon_minutes: int | None = None
+    overhead_per_minute: Decimal | None = None
     market_version: str = "data_clean_static_v0_2"
     market_size: int = 5
+    arrival_rate_per_day: Decimal = Decimal("1.00")
     decoy_rate: Decimal = Decimal("0.40")
+    manipulation_rate: Decimal = Decimal("0.00")
     redteam_enabled: bool = False
+    delivery_mode: str = "tool_mediated"
+    menu_version: str = "menu_v0_4"
+    menu_checksum: str = ""
+    task_mix: dict[str, float] = field(default_factory=lambda: {"data_clean": 1.0})
+    difficulty_distribution: dict[str, float] = field(default_factory=lambda: {"easy": 1.0})
+    seed_split: str = "ad_hoc"
+    pricing_table_version: str = "pricing_v0_4"
+    brain_model: str = ""
+    context_policy: str = "sliding_window"
+    ctx_window_tokens: int = 24000
+    caching: bool = False
+    corpus_schema_version: str = "none"
+    menu_schema_version: str = "solvent_delivery_menu_v0_4"
+    work_time_enabled: bool = False
+    job_ttl_ticks: int | None = None
+    job_ttl_minutes: int | None = None
+    reputation_enabled: bool = False
+    reputation_start: Decimal = Decimal("1.00")
+    reputation_pass_delta: Decimal = Decimal("0.10")
+    reputation_fail_delta: Decimal = Decimal("-0.20")
+    reputation_concede_delta: Decimal = Decimal("-0.10")
+    reputation_gate_threshold: Decimal = Decimal("1.00")
+    reputation_high_value_cutoff: Decimal = Decimal("1.50")
 
 
 @dataclass(frozen=True)
@@ -28,6 +55,8 @@ class JobPublic:
     brief: str
     inputs: dict[str, Any]
     arrival_tick: int
+    arrival_minute: int | None = None
+    expiry_minute: int | None = None
 
 
 @dataclass(frozen=True)
@@ -60,6 +89,9 @@ class Job:
     rubric: Rubric
     is_decoy: bool = False
     manipulation: ManipulationEvent | None = None
+    internal_difficulty: str = "easy"
+    arrival_minute: int | None = None
+    expiry_minute: int | None = None
 
     def to_public(self) -> JobPublic:
         return JobPublic(
@@ -68,6 +100,8 @@ class Job:
             brief=self.brief,
             inputs=dict(self.inputs),
             arrival_tick=self.arrival_tick,
+            arrival_minute=self.arrival_minute,
+            expiry_minute=self.expiry_minute,
         )
 
     @property
@@ -124,6 +158,8 @@ class AcceptedJob:
     contract_price: Decimal
     submitted: bool = False
     paid: bool = False
+    delivery_model: str | None = None
+    delivery_attempts: int = 0
 
 
 @dataclass(frozen=True)

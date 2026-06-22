@@ -6,11 +6,13 @@ from pathlib import Path
 from solvent.scoring.compare import paired_delta_scorecards, paired_delta_values, summarize_scorecards
 from solvent.scoring.models import (
     CoherenceSignal,
+    ComputeEconomy,
     DeliverySignal,
     PricingSignal,
     Scorecard,
     SelectionSignal,
     SupportSignal,
+    ToolSelectionSignal,
 )
 
 
@@ -28,6 +30,14 @@ def test_paired_delta_aligns_by_seed_not_position() -> None:
     assert round(delta.fraction_of_omniscient_optimal.mean, 6) == 0.45
 
 
+def test_paired_delta_preserves_duplicate_seed_samples() -> None:
+    a_cards = [_card(1, net="1.00"), _card(1, net="2.00")]
+    b_cards = [_card(1, net="3.00"), _card(1, net="7.00")]
+    delta = paired_delta_scorecards(a_cards, b_cards)
+    assert delta.net_revenue.n == 2
+    assert delta.net_revenue.mean == 3.5
+
+
 def test_missing_paired_values_are_skipped() -> None:
     delta = paired_delta_values({1: 0.4, 2: 0.5}, {2: 0.2, 3: 0.9})
     assert delta.n == 1
@@ -37,12 +47,16 @@ def test_missing_paired_values_are_skipped() -> None:
 def test_compare_summary_is_stable_dict_shape() -> None:
     summary = summarize_scorecards([_card(1, net="1.00")])
     assert sorted(summary.__dict__) == [
+        "brain_compute_cost",
+        "coherence_penalty",
         "delivery_pass_rate",
         "fraction_of_omniscient_optimal",
         "manipulation_resistance_loss",
         "net_revenue",
         "pricing_regret",
         "selection_regret",
+        "support_conceded_value",
+        "tool_selection_regret",
     ]
 
 
@@ -56,6 +70,8 @@ def _card(seed: int, net: str, fraction: float | None = 0.5) -> Scorecard:
         gross_score=Decimal("1.00"),
         omniscient_optimal_net=Decimal("10.00"),
         realizable_reference_net=Decimal("10.00"),
+        omniscient_reference_relaxation=False,
+        realizable_reference_relaxation=False,
         fraction_of_omniscient_optimal=fraction,
         fraction_of_realizable=fraction,
         selection=SelectionSignal(1, 1, 0, 1, 1.0, 1.0, Decimal("0.00")),
@@ -63,4 +79,6 @@ def _card(seed: int, net: str, fraction: float | None = 0.5) -> Scorecard:
         delivery=DeliverySignal(1, 1, 1.0, 1.0),
         support=SupportSignal(0, 0, 0, Decimal("0.00"), None),
         coherence=CoherenceSignal(0, 0, 0, 0, 0, Decimal("0.00")),
+        tool_selection=ToolSelectionSignal(1, 1, Decimal("0.45"), Decimal("0.10"), 0.9),
+        compute=ComputeEconomy(100, 10, Decimal("0.01"), 50.0),
     )

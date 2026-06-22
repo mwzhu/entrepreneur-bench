@@ -82,6 +82,8 @@ def test_trace_is_jsonl_and_does_not_leak_hidden_fields(tmp_path: Path) -> None:
     assert "rubric" not in raw_trace
     assert "true_value" not in raw_trace
     assert "is_decoy" not in raw_trace
+    assert "internal_difficulty" not in raw_trace
+    assert "pass_prob" not in raw_trace
 
 
 def test_finalize_is_idempotent_and_terminated_event_emitted_once(tmp_path: Path) -> None:
@@ -116,6 +118,7 @@ def _config(trace_path: Path) -> EnvConfig:
         overhead_per_tick=Decimal("0.05"),
         tool_call_cost=Decimal("0.01"),
         trace_path=trace_path,
+        delivery_mode="direct",
     )
 
 

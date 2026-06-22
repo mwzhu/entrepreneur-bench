@@ -569,8 +569,9 @@ Deliberately thin and model-agnostic; the swappable thing under test.
 | **v0.1 (MVP core)** | Ledger + clock + burn/overhead; **`data_clean` only** + deterministic verifier; seeded **static** board with good jobs + decoys; hidden `reservation_price` + bids; stub agent; JSONL trace; `solvent run` |
 | **v0.2 (the attribution machine)** | Selection + pricing + delivery signals; omniscient + capability-conditioned references; fraction-of-optimal; **one** scripted manipulation type measured as the paired delta; behavioral coherence; per-run **scorecard** |
 | **v0.3 (the demo)** | Two configs (`naive` vs `+procedure`); paired-seed scoreboard with a dollar delta; **trace viewer** — built only after the backend scorecard is correct and interpretable |
-| v0.4 (expand) | Second task type (`extract`); characterization-run command; dev/test seed split; reputation/reactivity dynamics (C.4A) |
-| v0.5 (validate) | SWE-Lancer anchor (IC SWE + Manager) as a qualitative external-validity smell test |
+| v0.4 (expand) | **Real LLM harness** (C.13); delivery-tool economy (C.20.3–4); second task type (`extract`); characterization-run command; dev/test seed split; (v0.4b) real time + reputation/reactivity (C.20.5, C.4A) — see `v0_4.md` |
+| **v0.5 (experiment & findings)** | Long-horizon, multi-model, cost-optimized experiment platform (bounded context, caching, budgets, multi-provider clients) → a Vending-Bench-style leaderboard + per-capability findings report + multi-model viewer — see `v0_5.md`. *This is the VB-style demo payoff; it was not enumerated in the original roadmap.* |
+| v0.6 (validate) | SWE-Lancer anchor (IC SWE + Manager) as a qualitative external-validity smell test; concurrency (`max_wip`) + live "direct delivery" worker mode (C.20.8) — *renumbered from the original v0.5* |
 
 **v0.1–v0.3 is the application artifact.** It is deliberately shippable in days, not weeks: one task type, one manipulation, one comparison, one great trace. Everything below v0.3 is expansion, and SWE-Lancer and reactivity are explicitly *not* on the first demo path.
 
@@ -708,7 +709,8 @@ The economic-model upgrade is larger than v0.3 and changes the core economy, so 
 
 - **v0.4a — delivery-as-business-cost:** frozen delivery menu + characterization; `est_cost` becomes the realized debited cost. Still WIP = 1, still discrete ticks.
 - **v0.4b — real time:** work-driven durations + arrival/expiry calendar (C.20.5).
-- **v0.5+ — concurrency (`max_wip`) and a live "direct delivery" mode** for the SWE-Lancer worker-capability anchor.
+- **v0.5 — experiment & findings:** the long-horizon, multi-model, cost-optimized experiment platform + VB-style findings (see `v0_5.md`). It *activates and scales* the v0.4b time model to a long job stream; it does not re-introduce it.
+- **v0.6 — concurrency (`max_wip`) and a live "direct delivery" mode** for the SWE-Lancer worker-capability anchor (renumbered from the original v0.5).
 
 Keep the v0.3 attribution machine (flat-cost stub world) intact as the proven baseline throughout.
 

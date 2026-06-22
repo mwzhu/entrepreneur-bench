@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "solvent"
-version = "0.3.0"
+version = "0.5.0"
 description = "Deterministic freelance operation eval environment"
 requires-python = ">=3.9"
 dependencies = []
@@ -20,6 +20,8 @@ include = ["solvent*"]
 
 [tool.setuptools.package-data]
 "solvent.viewer" = ["static/*"]
+"solvent.delivery" = ["menu_data/*.json"]
+"solvent" = ["configs/*.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

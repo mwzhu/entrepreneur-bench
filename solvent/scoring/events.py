@@ -22,15 +22,31 @@ class SubmissionFact:
 
 
 @dataclass(frozen=True)
+class DeliveryAttemptFact:
+    job_id: str
+    mode: str
+    model: str | None
+    passed: bool
+    score: float
+    price_charged: Decimal
+    duration: int
+    attempt_index: int = 0
+
+
+@dataclass(frozen=True)
 class TraceFacts:
     seed: int
     config_id: str
     start_balance: Decimal
     horizon_ticks: int
+    horizon_minutes: int | None
     overhead_per_tick: Decimal
+    overhead_per_minute: Decimal | None
     tool_call_cost: Decimal
     market_version: str
     market_size: int
+    arrival_rate_per_day: Decimal
+    job_ttl_minutes: int | None
     decoy_rate: Decimal
     redteam_enabled: bool
     end_balance: Decimal
@@ -46,6 +62,21 @@ class TraceFacts:
     invalid_actions: list[dict[str, Any]]
     terminated_reason: str
     compatibility_estimated_horizon: bool
+    brain_tokens_in: int = 0
+    brain_tokens_out: int = 0
+    brain_cache_read_tokens: int = 0
+    brain_cache_write_tokens: int = 0
+    brain_cost: Decimal = Decimal("0")
+    delivery_mode: str = "direct"
+    menu_version: str = "menu_v0_4"
+    menu_checksum: str = ""
+    task_mix: dict[str, float] | None = None
+    difficulty_distribution: dict[str, float] | None = None
+    seed_split: str = "ad_hoc"
+    pricing_table_version: str = "pricing_v0_4"
+    corpus_schema_version: str = "none"
+    menu_schema_version: str = "solvent_delivery_menu_v0_4"
+    delivery_attempts: list[DeliveryAttemptFact] | None = None
 
 
 def load_events(trace_path: Path) -> list[dict[str, Any]]:
@@ -66,13 +97,29 @@ def facts_from_events(events: list[dict[str, Any]]) -> TraceFacts:
     decoy_rate = _decimal(start_payload.get("decoy_rate", "0"))
     redteam_enabled = bool(start_payload.get("redteam_enabled", False))
     horizon_ticks = int(start_payload.get("horizon_ticks", events[-1]["tick"]))
+    horizon_minutes = _optional_int(start_payload.get("horizon_minutes"))
     compatibility_estimated_horizon = not metadata_v0_2
     overhead_per_tick = _infer_overhead(events, start_payload)
+    overhead_per_minute = _optional_decimal(start_payload.get("overhead_per_minute"))
     tool_call_cost = _infer_tool_call_cost(events, start_payload)
+    arrival_rate_per_day = _decimal(start_payload.get("arrival_rate_per_day", "1.00"))
+    provenance = start_payload.get("provenance", {})
+    delivery_mode = str(provenance.get("delivery_mode", "direct"))
+    menu_version = str(provenance.get("menu_version", "menu_v0_4"))
+    menu_checksum = str(provenance.get("menu_checksum", ""))
+    task_mix = _float_dict(provenance.get("task_mix", {"data_clean": 1.0}))
+    difficulty_distribution = _float_dict(provenance.get("difficulty_distribution", {"easy": 1.0}))
+    seed_split = str(provenance.get("seed_split", "ad_hoc"))
+    pricing_table_version = str(provenance.get("pricing_table_version", "pricing_v0_4"))
+    corpus_schema_version = str(provenance.get("corpus_schema_version", "none"))
+    menu_schema_version = str(provenance.get("menu_schema_version", "solvent_delivery_menu_v0_4"))
+    job_ttl_minutes = _optional_int(provenance.get("job_ttl_minutes"))
 
     bids: list[BidFact] = []
     bids_by_job: dict[str, BidFact] = {}
     submissions: list[SubmissionFact] = []
+    delivery_attempts: list[DeliveryAttemptFact] = []
+    pending_deliveries: dict[str, dict[str, Any]] = {}
     paid_revenue_by_job: dict[str, Decimal] = {}
     manipulation_attempts: set[str] = set()
     manipulation_conceded: dict[str, Decimal] = {}
@@ -81,6 +128,11 @@ def facts_from_events(events: list[dict[str, Any]]) -> TraceFacts:
     tool_burn = Decimal("0")
     overhead_burn = Decimal("0")
     terminated_reason = ""
+    brain_tokens_in = 0
+    brain_tokens_out = 0
+    brain_cache_read_tokens = 0
+    brain_cache_write_tokens = 0
+    brain_cost = Decimal("0")
 
     for event in events:
         kind = event["kind"]
@@ -102,11 +154,39 @@ def facts_from_events(events: list[dict[str, Any]]) -> TraceFacts:
             if payload["job_id"] in bids_by_job:
                 bids_by_job[payload["job_id"]].accepted = False
         elif kind in {"verified_pass", "verified_fail"}:
-            submissions.append(
-                SubmissionFact(
-                    job_id=str(payload["job_id"]),
-                    passed=kind == "verified_pass",
-                    score=float(payload.get("score", 1.0 if kind == "verified_pass" else 0.0)),
+            submission = SubmissionFact(
+                job_id=str(payload["job_id"]),
+                passed=kind == "verified_pass",
+                score=float(payload.get("score", 1.0 if kind == "verified_pass" else 0.0)),
+            )
+            submissions.append(submission)
+            delivery_attempts.append(
+                DeliveryAttemptFact(
+                    job_id=submission.job_id,
+                    mode="direct",
+                    model=None,
+                    passed=submission.passed,
+                    score=submission.score,
+                    price_charged=Decimal("0"),
+                    duration=0,
+                    attempt_index=0,
+                )
+            )
+        elif kind == "delivered":
+            pending_deliveries[str(payload["job_id"])] = payload
+        elif kind in {"delivery_passed", "delivery_failed"}:
+            job_id = str(payload["job_id"])
+            delivered = pending_deliveries.get(job_id, {})
+            delivery_attempts.append(
+                DeliveryAttemptFact(
+                    job_id=job_id,
+                    mode="tool_mediated",
+                    model=str(payload.get("model", delivered.get("model", ""))),
+                    passed=kind == "delivery_passed",
+                    score=float(payload.get("score", 1.0 if kind == "delivery_passed" else 0.0)),
+                    price_charged=_decimal(payload.get("price_charged", delivered.get("price_charged", "0"))),
+                    duration=int(payload.get("duration", delivered.get("duration", 0))),
+                    attempt_index=int(payload.get("attempt_index", delivered.get("attempt_index", 0))),
                 )
             )
         elif kind == "paid":
@@ -119,6 +199,12 @@ def facts_from_events(events: list[dict[str, Any]]) -> TraceFacts:
             manipulation_resisted.add(str(payload["job_id"]))
         elif kind == "invalid_action":
             invalid_actions.append(payload)
+        elif kind == "brain_metered":
+            brain_tokens_in = int(payload.get("cumulative_input_tokens", brain_tokens_in))
+            brain_tokens_out = int(payload.get("cumulative_output_tokens", brain_tokens_out))
+            brain_cache_read_tokens = int(payload.get("cumulative_cache_read_tokens", brain_cache_read_tokens))
+            brain_cache_write_tokens = int(payload.get("cumulative_cache_write_tokens", brain_cache_write_tokens))
+            brain_cost = _decimal(payload.get("cumulative_cost", brain_cost))
         elif kind == "terminated":
             terminated_reason = str(payload.get("reason", ""))
 
@@ -128,10 +214,14 @@ def facts_from_events(events: list[dict[str, Any]]) -> TraceFacts:
         config_id=config_id,
         start_balance=start_balance,
         horizon_ticks=horizon_ticks,
+        horizon_minutes=horizon_minutes,
         overhead_per_tick=overhead_per_tick,
+        overhead_per_minute=overhead_per_minute,
         tool_call_cost=tool_call_cost,
         market_version=market_version,
         market_size=market_size,
+        arrival_rate_per_day=arrival_rate_per_day,
+        job_ttl_minutes=job_ttl_minutes,
         decoy_rate=decoy_rate,
         redteam_enabled=redteam_enabled,
         end_balance=end_balance,
@@ -147,6 +237,21 @@ def facts_from_events(events: list[dict[str, Any]]) -> TraceFacts:
         invalid_actions=invalid_actions,
         terminated_reason=terminated_reason,
         compatibility_estimated_horizon=compatibility_estimated_horizon,
+        brain_tokens_in=brain_tokens_in,
+        brain_tokens_out=brain_tokens_out,
+        brain_cache_read_tokens=brain_cache_read_tokens,
+        brain_cache_write_tokens=brain_cache_write_tokens,
+        brain_cost=brain_cost,
+        delivery_mode=delivery_mode,
+        menu_version=menu_version,
+        menu_checksum=menu_checksum,
+        task_mix=task_mix,
+        difficulty_distribution=difficulty_distribution,
+        seed_split=seed_split,
+        pricing_table_version=pricing_table_version,
+        corpus_schema_version=corpus_schema_version,
+        menu_schema_version=menu_schema_version,
+        delivery_attempts=delivery_attempts,
     )
 
 
@@ -173,3 +278,20 @@ def _infer_tool_call_cost(events: list[dict[str, Any]], start_payload: dict[str,
 def _decimal(value: Any) -> Decimal:
     return value if isinstance(value, Decimal) else Decimal(str(value))
 
+
+def _optional_decimal(value: Any) -> Decimal | None:
+    if value is None:
+        return None
+    return _decimal(value)
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    return int(value)
+
+
+def _float_dict(value: Any) -> dict[str, float]:
+    if not isinstance(value, dict):
+        return {}
+    return {str(key): float(val) for key, val in value.items()}

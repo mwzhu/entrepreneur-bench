@@ -102,4 +102,5 @@ def _config(
         market_size=market_size,
         decoy_rate=decoy_rate,
         redteam_enabled=redteam_enabled,
+        delivery_mode="direct",
     )

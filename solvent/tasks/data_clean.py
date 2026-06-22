@@ -13,7 +13,7 @@ SOURCE_COLUMNS = ["full_name", "email", "signup_date", "plan"]
 VALID_PLANS = {"free", "pro", "enterprise"}
 
 
-def generate_data_clean_job(seed: int, job_index: int) -> Job:
+def generate_data_clean_job(seed: int, job_index: int, difficulty: str = "easy") -> Job:
     rng = random.Random(f"{seed}:{job_index}:data_clean")
     people = [
         (" Ada Lovelace ", "ADA@EXAMPLE.COM", "2026-01-04", " Pro"),
@@ -23,8 +23,23 @@ def generate_data_clean_job(seed: int, job_index: int) -> Job:
         ("Missing Email", "", "2026-01-06", "free"),
         ("Invalid Plan", "invalid@example.com", "2026-01-09", "trial"),
     ]
+    if difficulty in {"med", "hard"}:
+        people.extend(
+            [
+                (" Duplicate Spacing ", "SPACING@EXAMPLE.COM ", "2026-02-01", " Enterprise "),
+                ("Bad Date", "bad-date@example.com", "", "pro"),
+            ]
+        )
+    if difficulty == "hard":
+        people.extend(
+            [
+                ("Casey Semicolon", "CASEY@EXAMPLE.COM", "2026-03-03", "FREE"),
+                ("Unknown Plan", "unknown@example.com", "2026-03-04", "business"),
+            ]
+        )
     rng.shuffle(people)
-    rows = people[:4]
+    target_rows = {"easy": 4, "med": 6, "hard": 8}.get(difficulty, 4)
+    rows = people[:target_rows]
     if not any(row[1] == "" for row in rows):
         rows[-1] = ("Missing Email", "", "2026-01-06", "free")
     if not any(row[3].strip().lower() == "trial" for row in rows):
@@ -50,6 +65,7 @@ def generate_data_clean_job(seed: int, job_index: int) -> Job:
         reservation_price=reservation_price.quantize(Decimal("0.01")),
         est_cost=est_cost,
         rubric=_rubric(),
+        internal_difficulty=difficulty,
     )
 
 

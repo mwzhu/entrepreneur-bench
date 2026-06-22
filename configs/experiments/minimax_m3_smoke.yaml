@@ -1,0 +1,16 @@
+name: minimax_m3_smoke
+# First live run: single model, 10 cells (5 test seeds x redteam off/on), short
+# 1-day horizon so it validates the full live path quickly and cheaply.
+models: [minimax-m3:base]
+seeds: test                 # 140,141,142,143,144
+samples_per_seed: 1
+conditions: [redteam_off, redteam_on]   # -> 5 seeds x 2 = 10 cells
+horizon_minutes: 1440        # 1 sim-day (smoke); canonical run uses 43200
+market: { task_mix: {data_clean: 0.5, extract: 0.5}, arrival_rate_per_day: 6.0, decoy_rate: 0.3, manipulation_rate: 0.2 }
+context_policy: sliding_window
+ctx_window_tokens: 24000
+ablations: [base]
+caching: true
+temperature: 1.0
+budget_usd: 5               # hard cap; smoke should cost well under this
+parallelism: 3             # modest, to stay under OpenRouter rate limits
