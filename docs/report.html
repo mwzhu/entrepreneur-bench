@@ -123,25 +123,6 @@
   <h2>Method</h2>
 
   <h3>Environment Setup</h3>
-  <ul>
-    <li><b>The agent</b> is a solo freelance software-services business owner on an Upwork-like platform, with the goal of maximizing profit.</li>
-    <li><b>Job board:</b> 3&ndash;6 new jobs arrive per day, each with an expiration date.</li>
-    <li><b>Pricing:</b> every job shows a starting price and has a higher hidden ceiling the employer will pay. The agent can accept the starting price, or counter once. If the counter is rejected it can still accept the starting price. (Tests problem selection and pricing.)</li>
-    <li><b>Delivery:</b> the agent works one job at a time and picks from several &ldquo;coding agent&rdquo; tools that differ in intelligence, cost, and speed, mimicking how a freelancer delegates work. (Tests tool selection and resource allocation.)</li>
-    <li><b>Economics:</b> starts with $1,000; task prices range ~$50&ndash;500; revenue is earned on successful delivery; costs are tool spend plus $10/day rent.</li>
-  </ul>
-
-  <table>
-    <thead>
-      <tr><th>Model</th><th class="n">Price</th><th>Speed</th><th class="n">Capability</th><th class="n">easy</th><th class="n">med</th><th class="n">hard</th></tr>
-    </thead>
-    <tbody>
-      <tr><td>tool-mini</td><td class="n">$2.00</td><td>fast</td><td class="n">0.55</td><td class="n">0.95</td><td class="n">0.52</td><td class="n">0.14</td></tr>
-      <tr><td>tool-mid</td><td class="n">$12.00</td><td>medium</td><td class="n">0.80</td><td class="n">0.99</td><td class="n">0.87</td><td class="n">0.53</td></tr>
-      <tr><td>tool-pro</td><td class="n">$45.00</td><td>fast</td><td class="n">0.95</td><td class="n">1.00</td><td class="n">0.97</td><td class="n">0.83</td></tr>
-    </tbody>
-  </table>
-  <p class="small">Columns easy/med/hard are the probability each model successfully delivers a task of that difficulty.</p>
 
   <div class="diagram">
     <svg viewBox="0 0 820 432" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture: a long-running agent loop runs marketplace and delivery tools against a job-board and delivery simulation; scoring is the money balance after 30 days plus selection, pricing and tool-choice capabilities.">
@@ -178,6 +159,27 @@
     </svg>
   </div>
   <p class="cap">The agent runs a long-running tool loop against a seeded job-board and stochastic delivery simulation; the headline score is the final money balance, decomposed into selection, pricing, and tool-choice capabilities.</p>
+
+  <ul>
+    <li><b>The agent</b> is a solo freelance software-services business owner on an Upwork-like platform, with the goal of maximizing profit.</li>
+    <li><b>Job board:</b> 3&ndash;6 new jobs arrive per day, each with an expiration date.</li>
+    <li><b>Pricing:</b> every job shows a starting price and has a higher hidden ceiling the employer will pay. The agent can accept the starting price, or counter once. If the counter is rejected it can still accept the starting price. (Tests problem selection and pricing.)</li>
+    <li><b>Delivery:</b> the agent works one job at a time and picks from several &ldquo;coding agent&rdquo; tools (the <a href="#tool-menu">delivery menu below</a>) that differ in intelligence, cost, and speed, mimicking how a freelancer delegates work. (Tests tool selection and resource allocation.)</li>
+    <li><b>Economics:</b> starts with $1,000; task prices range ~$50&ndash;500; revenue is earned on successful delivery; costs are tool spend plus $10/day rent.</li>
+  </ul>
+
+  <h3 id="tool-menu">The delivery tool menu</h3>
+  <table>
+    <thead>
+      <tr><th>Model</th><th class="n">Price</th><th>Speed</th><th class="n">Capability</th><th class="n">easy</th><th class="n">med</th><th class="n">hard</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>tool-mini</td><td class="n">$2.00</td><td>fast</td><td class="n">0.55</td><td class="n">0.95</td><td class="n">0.52</td><td class="n">0.14</td></tr>
+      <tr><td>tool-mid</td><td class="n">$12.00</td><td>medium</td><td class="n">0.80</td><td class="n">0.99</td><td class="n">0.87</td><td class="n">0.53</td></tr>
+      <tr><td>tool-pro</td><td class="n">$45.00</td><td>fast</td><td class="n">0.95</td><td class="n">1.00</td><td class="n">0.97</td><td class="n">0.83</td></tr>
+    </tbody>
+  </table>
+  <p class="small">Columns easy/med/hard are the probability each model successfully delivers a task of that difficulty.</p>
 
   <h3>Agent implementation</h3>
   <p><b>Context management:</b> Each turn, the agent sees the most recent slice of history that fits a 30,000-token budget. A naive sliding window drops the oldest message every turn, so the prompt's prefix changes constantly and the provider's prompt cache rarely hits (~10%), roughly tripling cost. We instead use an <b>anchored window</b>: we keep a fixed anchor into the history and trim only in large chunks when the budget is exceeded, so the prefix stays byte-stable for many turns and we pay a cache miss only at each chunk boundary (~every 50 turns). This held the cache-hit rate at ~88&ndash;95% across the full 30-day episode, cutting cost ~3&times;. The tradeoff: because we trim in chunks rather than one message at a time, the window carries slightly less history than a naive window would; we sacrifice a little context to keep the prefix cacheable.</p>
