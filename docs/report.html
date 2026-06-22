@@ -53,6 +53,8 @@
   .note{font-size:14px;color:var(--muted)}
   .kbd{font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--accent2)}
   .small{font-size:14px;color:var(--muted)}
+  .core{font-size:16px;color:var(--ink);line-height:1.55;background:rgba(29,158,117,.07);border:1px solid rgba(29,158,117,.28);border-left:4px solid var(--accent);border-radius:10px;padding:14px 17px;margin:10px 0 22px}
+  .core .clab{display:block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-bottom:5px}
   .trace{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:11px 14px;margin:10px 0}
   .trace .tlabel{display:block;font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
   .trace .tq{display:block;color:#3a3d43;font-style:italic;font-size:13.5px;margin:5px 0}
@@ -62,6 +64,28 @@
   .tracepair{display:flex;gap:10px;align-items:stretch;margin:10px 0}
   .tracepair>.trace{flex:1;min-width:0;margin:0}
   @media(max-width:620px){.tracepair{flex-direction:column}}
+  .find{margin:0 0 26px;padding:16px 18px;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .find h4{font-size:15px;font-weight:650;margin:0 0 3px;color:var(--ink)}
+  .find .cap{font-size:13px;color:var(--muted);margin:0 0 13px}
+  .vrow{display:flex;align-items:center;gap:10px;margin:7px 0}
+  .vrow .who{width:66px;font-size:12px;font-weight:700;text-align:right;flex:none}
+  .vrow .who.ds{color:var(--accent)} .vrow .who.mm{color:var(--accent2)}
+  .barwrap{flex:1;min-width:0}
+  .bar{display:flex;height:30px;border-radius:6px;overflow:hidden;background:var(--panel);border:1px solid var(--line)}
+  .seg{height:100%;display:flex;align-items:center;padding:0 8px;font-size:11.5px;font-weight:600;color:#fff;white-space:nowrap;min-width:0;overflow:hidden}
+  .seg.ds{background:var(--accent)} .seg.mm{background:var(--accent2)}
+  .seg.good{background:var(--accent)}
+  .seg.neutral{background:#bcc2cb;color:#2f333a}
+  .seg.bad{background:#d85a30;opacity:.55;color:#fff}
+  .seg.idle,.seg.miss{background:repeating-linear-gradient(45deg,#d7dbe1,#d7dbe1 5px,#e9ecf0 5px,#e9ecf0 10px);color:var(--faint)}
+  .vleg{display:flex;flex-wrap:wrap;gap:13px;font-size:11.5px;color:var(--muted);margin:9px 0 2px 76px}
+  .vleg span{display:inline-flex;align-items:center;gap:5px}
+  .vk{width:11px;height:11px;border-radius:3px;display:inline-block;flex:none}
+  .vk.good{background:var(--accent)} .vk.ds{background:var(--accent)} .vk.mm{background:var(--accent2)}
+  .vk.neutral{background:#bcc2cb} .vk.bad{background:#d85a30;opacity:.55}
+  .vk.idle{background:repeating-linear-gradient(45deg,#d7dbe1,#d7dbe1 4px,#e9ecf0 4px,#e9ecf0 8px)}
+  .ceil{position:relative}
+  .ceil::after{content:'ideal 1.0';position:absolute;right:0;top:-15px;font-size:10px;color:var(--faint);font-weight:600}
   table.tools td:first-child{font-weight:600;color:var(--ink);width:210px;vertical-align:middle}
   table.tools code{font-size:13px}
   table.tools .note{color:var(--faint);font-size:13px}
@@ -99,10 +123,13 @@
   <h2>Method</h2>
 
   <h3>Environment Setup</h3>
-  <p>The agent is a solo freelance software services business owner working on a platform like Upwork with the goal of maximizing profit.</p>
-  <p>There is a job board with 3&ndash;6 new jobs per day, and jobs have expiration dates too. Each job has a starting price and a higher internal price the employer is willing to pay (unknown to agent). The agent can choose to accept the starting price or offer a new price only once, which the employer can accept or reject. If the employer rejects, the agent can still accept the starting price (this mechanism evaluates agent's problem selection and pricing skill).</p>
-  <p>To complete tasks, the agent has multiple coding agent options to choose from, each with different intelligence, cost, and speed. The idea is to mimic a human software freelancer, and evaluate the agent's tool selection and resource allocation skill.</p>
-  <p>At start, the business starts with $1000. Task prices range from about $50&ndash;500. The business gains revenue when successfully delivering tasks. The business's costs include the money it spends using coding agents to deliver tasks and an extra $10/day for rent.</p>
+  <ul>
+    <li><b>The agent</b> is a solo freelance software-services business owner on an Upwork-like platform, with the goal of maximizing profit.</li>
+    <li><b>Job board:</b> 3&ndash;6 new jobs arrive per day, each with an expiration date.</li>
+    <li><b>Pricing:</b> every job shows a starting price and has a higher hidden ceiling the employer will pay. The agent can accept the starting price, or counter once. If the counter is rejected it can still accept the starting price. (Tests problem selection and pricing.)</li>
+    <li><b>Delivery:</b> the agent works one job at a time and picks from several &ldquo;coding agent&rdquo; tools that differ in intelligence, cost, and speed, mimicking how a freelancer delegates work. (Tests tool selection and resource allocation.)</li>
+    <li><b>Economics:</b> starts with $1,000; task prices range ~$50&ndash;500; revenue is earned on successful delivery; costs are tool spend plus $10/day rent.</li>
+  </ul>
 
   <table>
     <thead>
@@ -234,56 +261,76 @@ Calling end_tick advances business time. Advancing time, tool use, and delivery-
     </tbody>
   </table>
   <p class="small">Pricing regret and tool-selection regret are reported per-job above (price ratio, EV ratio) rather than as absolute totals, because the absolute totals are confounded by volume &mdash; deepseek does more business, so its absolute regret is larger even where its per-job decisions are equal or better.</p>
-  <p class="small"><b>The high tool-selection EV ratio is forgiving, not earned.</b> Hidden job difficulty must be inferred, and both models pick the value-maximizing model only ~20&ndash;35% of the time; the ratio still lands near 0.87 because wrong picks are usually only mildly wrong. They err in opposite directions: deepseek economizes (and eats more delivery failures), while minimax avoids the mid tier almost entirely (tool-mid used 2&ndash;16&times;/run vs deepseek's 24&ndash;48&times;) and in some seeds defaults to the premium model on ~80% of even the easy jobs &mdash; a &ldquo;safety&rdquo; reflex it adopts after a failed delivery.</p>
-  <div class="trace"><span class="tlabel">trace &middot; minimax seed-140, just after a tool-mid delivery failed</span>
-    <span class="tq">&ldquo;&hellip;the failed delivery might just be bad luck or might indicate that capability 0.8 isn&rsquo;t enough for the cleaning task. Let me use tool-pro for safety.&rdquo;</span>
-    <div class="tline"><span class="tcall">&rarr; deliver(&hellip;, model=&quot;tool-pro&quot; &middot; $45)</span></div>
-  </div>
+  <p class="small"><b>The high tool-selection EV ratio is forgiving, not earned.</b> Hidden job difficulty must be inferred, and both models pick the value-maximizing model only ~20&ndash;35% of the time; the ratio still lands near 0.87 because wrong picks are usually only mildly wrong. They err in opposite directions: deepseek economizes (and eats more delivery failures), while minimax avoids the mid tier almost entirely (tool-mid used 2&ndash;16&times;/run vs deepseek's 24&ndash;48&times;) and in some seeds defaults to the premium model on ~80% of even the easy jobs &mdash; a &ldquo;safety&rdquo; reflex it adopts after a failed delivery (see finding 5).</p>
 
   <h3>Qualitative findings</h3>
 
-  <ol>
-    <li><b>Minimax is lazier, which leads to worse job selection and pricing.</b> It accepts the default and lets opportunities lapse.
-      <ol type="a">
-        <li><b>Per-decision intelligence is essentially the same:</b> tool-selection quality is tied (EV ratio 0.876 vs 0.866) and per-job pricing differs only marginally (price ratio 0.82 vs 0.79).</li>
-        <li><b>The differences are operational:</b>
-          <ul>
-            <li><b>Engagement / throughput.</b> The same ~137 jobs arrive each run. deepseek <b>acts on every one</b> (≈95 accepted, ≈42 declined); minimax acts on only ~107 and lets <b>~30 jobs (including ~20 profitable ones) expire unhandled</b>. That missed work &mdash; not worse picks &mdash; is the entire recall gap (99.5% vs 79.5% of good jobs captured).
-              <div class="small" style="margin-top:6px">The most dramatic case is a cold-start <b>analysis-paralysis</b> (seed 140): minimax called <code>end_tick</code> <b>20 times in a row</b>, re-analyzing the same growing board each turn, before accepting its first job at day 2.1 &mdash; watching high-value jobs expire in real time (at turn 7 it noted dc-140-0 had &ldquo;only 48 minutes left!&rdquo; and still advanced). At turn 20 it finally caught itself:</div>
-              <div class="trace"><span class="tlabel">trace &middot; minimax seed-140, turn 20 (~day 2.1) &mdash; after 20 straight clock-advances</span>
-                <span class="tq">&ldquo;Wait, looking back at my prior actions &mdash; I kept advancing time without taking any jobs! That&rsquo;s a mistake. I need to start accepting jobs now.&rdquo;</span>
-                <div class="tline"><span class="tcall">&rarr; accept(dc-140-10)</span> &mdash; its first job, after several had already expired</div>
-              </div>
-            </li>
-            <li><b>Negotiation.</b> deepseek counters on nearly every job (94/95) and <b>lands every counter</b> (0 overshoots) &mdash; precise price discovery just under the hidden ceiling. minimax mostly just <b>accepts the posted floor</b> (64 times) and, on the rare counter, <b>overshoots ~40% of the time</b>. It&rsquo;s a mindset gap &mdash; deepseek actively reasons toward the ceiling, while minimax won&rsquo;t guess and plays it safe:
-              <div class="tracepair">
-                <div class="trace"><span class="tlabel">deepseek &middot; estimates the ceiling, then pushes</span>
-                  <span class="tq">&ldquo;The previous job had ceiling above 300 (my bid 300 accepted). This one might be lower. I&rsquo;ll bid 110 to test&hellip; if it&rsquo;s rejected, the starting price stays open.&rdquo;</span>
-                  <div class="tline"><span class="tcall">&rarr; bid($110)</span> &mdash; accepted, just under the ceiling</div>
-                </div>
-                <div class="trace"><span class="tlabel">minimax &middot; won&rsquo;t guess, takes the safe price</span>
-                  <span class="tq">&ldquo;I don&rsquo;t know the ceiling. Let me just accept at starting price. <b>Better to lock in known profit than gamble.</b>&rdquo;</span>
-                  <div class="tline"><span class="tcall">&rarr; declines to counter</span> &mdash; settles for the posted floor</div>
-                </div>
-              </div>
-            </li>
-          </ul>
-        </li>
-      </ol>
-    </li>
-    <li><b>Deepseek is far more active with its tools.</b> It takes ~50% more actions per run (≈490&ndash;635 tool calls vs minimax's ≈320&ndash;420) and <b>inspects jobs before acting</b> (~100&times;/run vs minimax's 0), while minimax spends nearly half its turns just advancing the clock. That activity is what captures the jobs. It does carry a harmless side effect: deepseek logs ~7&times; more invalid actions (25/run vs 3.5), almost all <b>garbled job IDs</b> (e.g. <code>dc&mdash;140-12</code>) that it retries and recovers from for free &mdash; so the higher error count is a sign of engagement, not carelessness.</li>
+  <div class="core"><span class="clab">Core finding</span>Minimax is lazier: it fewer jobs and negotiates less. The gap is <b>operational, not intelligence</b> (minimax is the weaker operator, not the weaker decider).</div>
 
-    <li><b>Both models systematically underprice.</b>
-      <ul>
-        <li>Both land around 0.80 of the client's hidden ceiling, leaving ~20% of each job's surplus uncaptured.</li>
-      </ul>
-      <div class="small">Bids anchor to the posted price and stay timid &mdash; the one-shot counter makes overshooting feel risky, so even deepseek nudges only a few percent:</div>
-      <div class="trace"><span class="tlabel">trace &middot; deepseek seed-142, pricing dc-142-0 (posted floor $237.21)</span>
-        <span class="tq">&ldquo;I could bid 250? 260?&hellip; if rejected, I can still accept at starting_price. So I can try a modest bid. Let&rsquo;s bid 250.00. That&rsquo;s ~5% increase&hellip; But note: I have only one counter per job.&rdquo;</span>
-        <div class="tline"><span class="tcall">&rarr; bid($250)</span> &mdash; a ~5% nudge; fear of the one-shot counter leaves most of the surplus on the table</div>
-      </div>
-    </li>
-  </ol>
+  <div class="find">
+    <h4>1 &middot; Minimax takes less jobs</h4>
+    <p class="cap">Of the ~95 profitable jobs that arrive each run, deepseek works 99%; minimax lets ~20 expire untouched.</p>
+    <div class="vrow"><span class="who ds">deepseek</span><div class="barwrap"><div class="bar">
+      <div class="seg ds" style="flex:0 0 99.5%">94 of 95 worked</div><div class="seg miss" style="flex:1"></div></div></div></div>
+    <div class="vrow"><span class="who mm">minimax</span><div class="barwrap"><div class="bar">
+      <div class="seg mm" style="flex:0 0 79.5%">75 worked</div><div class="seg miss" style="flex:0 0 20.5%">~20 expired</div></div></div></div>
+    <div class="vleg"><span><i class="vk good"></i>jobs worked</span><span><i class="vk idle"></i>left to expire</span></div>
+    <div class="trace" style="margin-top:12px"><span class="tlabel">why &middot; minimax seed-140 burned its first ~2 days re-analyzing the board (<code>end_tick</code> &times;20) before taking any job, then caught itself</span>
+      <span class="tq">&ldquo;Wait, looking back at my prior actions &mdash; I kept advancing time without taking any jobs! That&rsquo;s a mistake. I need to start accepting jobs now.&rdquo;</span>
+    </div>
+  </div>
+
+  <div class="find">
+    <h4>2 &middot; Deepseek negotiates more and better</h4>
+    <p class="cap">deepseek counters and lands ~99%; minimax takes the posted floor, and ~40% of its rare counters overshoot the hidden ceiling.</p>
+    <div class="vrow"><span class="who ds">deepseek</span><div class="barwrap"><div class="bar">
+      <div class="seg good" style="flex:0 0 97%">94 counters landed</div><div class="seg neutral" style="flex:0 0 1.5%"></div><div class="seg bad" style="flex:0 0 1.5%"></div></div></div></div>
+    <div class="vrow"><span class="who mm">minimax</span><div class="barwrap"><div class="bar">
+      <div class="seg good" style="flex:0 0 16%">14</div><div class="seg neutral" style="flex:0 0 73%">64 took the floor</div><div class="seg bad" style="flex:0 0 11%">9 overshot</div></div></div></div>
+    <div class="vleg"><span><i class="vk good"></i>counter landed</span><span><i class="vk neutral"></i>accepted the floor</span><span><i class="vk bad"></i>counter rejected (overshoot)</span></div>
+    <div class="tracepair" style="margin-top:12px">
+      <div class="trace"><span class="tlabel">deepseek &middot; estimates the ceiling, then pushes</span>
+        <span class="tq">&ldquo;The previous job had ceiling above 300&hellip; this one might be lower. I&rsquo;ll bid 110 to test &mdash; if rejected, the starting price stays open.&rdquo;</span></div>
+      <div class="trace"><span class="tlabel">minimax &middot; won&rsquo;t guess, takes the safe price</span>
+        <span class="tq">&ldquo;I don&rsquo;t know the ceiling. Let me just accept at starting price. <b>Better to lock in known profit than gamble.</b>&rdquo;</span></div>
+    </div>
+  </div>
+
+  <div class="find">
+    <h4>3 &middot; Deepseek uses more tools</h4>
+    <p class="cap">deepseek takes ~50% more actions and inspects jobs before acting; minimax spends ~44% of its turns just advancing the clock, and never inspects.</p>
+    <div class="vrow"><span class="who ds">deepseek</span><div class="barwrap"><div class="bar" style="width:100%">
+      <div class="seg ds" style="flex:0 0 75%">558 actions &middot; 75% working</div><div class="seg idle" style="flex:0 0 25%">25% idle</div></div></div></div>
+    <div class="vrow"><span class="who mm">minimax</span><div class="barwrap"><div class="bar" style="width:66%">
+      <div class="seg mm" style="flex:0 0 56%">370 &middot; 56%</div><div class="seg idle" style="flex:0 0 44%">44% idle</div></div></div></div>
+    <div class="vleg"><span><i class="vk good"></i>working (inspect / bid / deliver)</span><span><i class="vk idle"></i>just advancing the clock</span><span>bar width &prop; total actions &middot; inspects/run: deepseek 111, minimax 0</span></div>
+  </div>
+
+  <div class="find">
+    <h4>4 &middot; Both models underprice</h4>
+    <p class="cap">Both stop at ~0.80 of the client&rsquo;s hidden ceiling, leaving ~20% of every job&rsquo;s surplus on the table.</p>
+    <div class="vrow"><span class="who ds">deepseek</span><div class="barwrap ceil"><div class="bar">
+      <div class="seg ds" style="flex:0 0 82%">0.82 of ceiling</div><div class="seg miss" style="flex:1">left on table</div></div></div></div>
+    <div class="vrow"><span class="who mm">minimax</span><div class="barwrap"><div class="bar">
+      <div class="seg mm" style="flex:0 0 79%">0.79 of ceiling</div><div class="seg miss" style="flex:1"></div></div></div></div>
+    <div class="vleg"><span>price captured as a fraction of the hidden ceiling (1.0 = priced right at it)</span></div>
+    <div class="trace" style="margin-top:12px"><span class="tlabel">why &middot; the one-shot counter makes overshooting feel risky, so even deepseek nudges only a few percent</span>
+      <span class="tq">&ldquo;&hellip;if rejected, I can still accept at starting_price. So I can try a modest bid. Let&rsquo;s bid 250.00. That&rsquo;s ~5% increase&hellip; But I have only one counter per job.&rdquo;</span>
+    </div>
+  </div>
+
+  <div class="find">
+    <h4>5 &middot; Both have similar tool-selection skill</h4>
+    <p class="cap">Per-delivery tool choice is ~identical (EV ratio 0.88 vs 0.87). Both pick the value-maximizing model only ~20&ndash;35% of the time, but wrong picks are usually only mildly wrong &mdash; so the gap here is negligible.</p>
+    <div class="vrow"><span class="who ds">deepseek</span><div class="barwrap ceil"><div class="bar">
+      <div class="seg ds" style="flex:0 0 87.6%">0.88 EV ratio</div><div class="seg miss" style="flex:1"></div></div></div></div>
+    <div class="vrow"><span class="who mm">minimax</span><div class="barwrap"><div class="bar">
+      <div class="seg mm" style="flex:0 0 86.6%">0.87 EV ratio</div><div class="seg miss" style="flex:1"></div></div></div></div>
+    <div class="vleg"><span>expected value of the model hired &divide; the best model&rsquo;s (1.0 = always optimal)</span></div>
+    <div class="trace" style="margin-top:12px"><span class="tlabel">how they differ &middot; minimax retreats to the premium tool &ldquo;for safety&rdquo; after a failed delivery; deepseek economizes</span>
+      <span class="tq">&ldquo;&hellip;the failed delivery might indicate that capability 0.8 isn&rsquo;t enough for the cleaning task. Let me use tool-pro for safety.&rdquo;</span>
+    </div>
+  </div>
 
   <p class="note"><b>Caveat.</b> With 2 models &times; 4 seeds &times; 1 sample this is exploratory. The deepseek &gt; minimax ranking is unusually robust (4/4 paired seeds), but the throughput gap reflects how thoroughly each model engages the tool loop, which can be prompt-sensitive &mdash; so the more prompt-robust signal is per-decision quality (which is close). A natural follow-up is to probe whether minimax's passivity persists under a prompt nudge toward thorough engagement.</p>
 
