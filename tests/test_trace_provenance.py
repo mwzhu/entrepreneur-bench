@@ -32,11 +32,31 @@ def test_episode_started_includes_v0_4_provenance(tmp_path: Path) -> None:
     assert provenance["seed_split"] == "dev"
     assert provenance["pricing_table_version"] == "pricing_v0_4"
     assert provenance["menu_schema_version"] == "solvent_delivery_menu_v0_4"
+    assert "breach_fee_frac" not in provenance
 
     scorecard = score_trace(summary.trace_path)
     assert scorecard.delivery_mode == "tool_mediated"
     assert scorecard.seed_split == "dev"
     assert scorecard.menu_checksum == provenance["menu_checksum"]
+
+
+def test_breach_fee_provenance_is_emitted_only_when_nonzero(tmp_path: Path) -> None:
+    env = Environment(
+        EnvConfig(
+            seed=42,
+            config_id="stub:test",
+            start_balance=Decimal("20.00"),
+            horizon_ticks=1,
+            overhead_per_tick=Decimal("0.05"),
+            tool_call_cost=Decimal("0"),
+            trace_path=tmp_path / "trace.jsonl",
+            breach_fee_frac=Decimal("0.25"),
+        )
+    )
+    summary = env.finalize()
+
+    first = json.loads(summary.trace_path.read_text(encoding="utf-8").splitlines()[0])
+    assert first["payload"]["provenance"]["breach_fee_frac"] == "0.25"
 
 
 def test_score_trace_fails_loudly_on_menu_checksum_mismatch(tmp_path: Path) -> None:

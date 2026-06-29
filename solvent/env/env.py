@@ -60,6 +60,33 @@ class Environment:
         self.terminated_reason: str | None = None
         self._summary: EpisodeSummary | None = None
         self._terminated_emitted = False
+        provenance = {
+            "seed": config.seed,
+            "market_version": config.market_version,
+            "market_size": config.market_size,
+            "decoy_rate": config.decoy_rate,
+            "manipulation_rate": config.manipulation_rate,
+            "menu_version": config.menu_version,
+            "menu_checksum": self.menu_checksum,
+            "delivery_mode": config.delivery_mode,
+            "task_mix": config.task_mix,
+            "difficulty_distribution": config.difficulty_distribution,
+            "seed_split": config.seed_split,
+            "pricing_table_version": config.pricing_table_version,
+            "brain_model": config.brain_model,
+            "context_policy": config.context_policy,
+            "ctx_window_tokens": config.ctx_window_tokens,
+            "caching": config.caching,
+            "corpus_schema_version": config.corpus_schema_version,
+            "menu_schema_version": config.menu_schema_version,
+            "work_time_enabled": config.work_time_enabled,
+            "job_ttl_ticks": config.job_ttl_ticks,
+            "job_ttl_minutes": config.job_ttl_minutes,
+            "business_time_mode": self._business_time_mode(),
+            "reputation_enabled": config.reputation_enabled,
+        }
+        if config.breach_fee_frac != 0:
+            provenance["breach_fee_frac"] = config.breach_fee_frac
         self._emit(
             "episode_started",
             {
@@ -78,31 +105,7 @@ class Environment:
                 "decoy_rate": config.decoy_rate,
                 "manipulation_rate": config.manipulation_rate,
                 "redteam_enabled": config.redteam_enabled,
-                "provenance": {
-                    "seed": config.seed,
-                    "market_version": config.market_version,
-                    "market_size": config.market_size,
-                    "decoy_rate": config.decoy_rate,
-                    "manipulation_rate": config.manipulation_rate,
-                    "menu_version": config.menu_version,
-                    "menu_checksum": self.menu_checksum,
-                    "delivery_mode": config.delivery_mode,
-                    "task_mix": config.task_mix,
-                    "difficulty_distribution": config.difficulty_distribution,
-                    "seed_split": config.seed_split,
-                    "pricing_table_version": config.pricing_table_version,
-                    "brain_model": config.brain_model,
-                    "context_policy": config.context_policy,
-                    "ctx_window_tokens": config.ctx_window_tokens,
-                    "caching": config.caching,
-                    "corpus_schema_version": config.corpus_schema_version,
-                    "menu_schema_version": config.menu_schema_version,
-                    "work_time_enabled": config.work_time_enabled,
-                    "job_ttl_ticks": config.job_ttl_ticks,
-                    "job_ttl_minutes": config.job_ttl_minutes,
-                    "business_time_mode": self._business_time_mode(),
-                    "reputation_enabled": config.reputation_enabled,
-                },
+                "provenance": provenance,
             },
             Decimal("0"),
         )
@@ -691,8 +694,11 @@ class Environment:
     def finalize(self) -> EpisodeSummary:
         if self._summary is not None:
             return self._summary
+        self._sweep_breach_fees()
         if self.terminated_reason is None:
             self.terminated_reason = "horizon" if self.clock.reached_horizon() else "turn_cap"
+        if self.ledger.balance < 0:
+            self.terminated_reason = "insolvent"
         if not self._terminated_emitted:
             self._emit("terminated", {"reason": self.terminated_reason}, Decimal("0"))
             self._terminated_emitted = True
@@ -709,6 +715,26 @@ class Environment:
         )
         self.trace.close()
         return self._summary
+
+    def _sweep_breach_fees(self) -> None:
+        if self.config.breach_fee_frac == 0:
+            return
+        for job_id in sorted(set(self.accepted_jobs) - self.submitted_jobs):
+            accepted = self.accepted_jobs[job_id]
+            fee = (self.config.breach_fee_frac * accepted.contract_price).quantize(Decimal("0.01"))
+            if fee <= 0:
+                continue
+            self.ledger.debit_burn(fee)
+            self._emit(
+                "breach",
+                {
+                    "job_id": job_id,
+                    "contract_price": accepted.contract_price,
+                    "fee": fee,
+                    "balance_after": self.ledger.balance,
+                },
+                fee,
+            )
 
     def _charge_tool_or_raise(self, action: str, payload: dict[str, Any] | None = None) -> None:
         self.ledger.debit_burn(self.config.tool_call_cost)

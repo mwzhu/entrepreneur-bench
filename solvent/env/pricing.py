@@ -54,6 +54,15 @@ DEFAULT_BRAIN_PRICES: dict[str, BrainPrice] = {
         "2026-06-21",
         PRICING_TABLE_VERSION,
     ),
+    "qwen3-4b-instruct": BrainPrice(
+        Decimal("0"),
+        Decimal("0"),
+        Decimal("0"),
+        Decimal("0"),
+        "local://self-served/qwen3-4b-instruct",
+        "2026-06-29",
+        PRICING_TABLE_VERSION,
+    ),
     "gpt-5.5": BrainPrice(
         Decimal("5.00"),
         Decimal("30.00"),

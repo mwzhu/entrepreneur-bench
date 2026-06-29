@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from solvent.doctor import doctor
 from solvent.env.pricing import DEFAULT_BRAIN_PRICES, TokenUsage, brain_cost, price_for_model
+from solvent.harness.providers.base import model_alias_env_var, resolve_model_name
 
 
 def test_opus_4_8_pricing_is_corrected_and_versioned() -> None:
@@ -24,7 +25,7 @@ def test_unknown_model_pricing_fails_loudly() -> None:
 
 
 def test_local_harness_pricing_is_zero_cost_and_versioned() -> None:
-    for model in ["fake", "recorded", "stub"]:
+    for model in ["fake", "recorded", "stub", "qwen3-4b-instruct"]:
         price = price_for_model(model)
 
         assert price.input_per_million == Decimal("0")
@@ -32,6 +33,15 @@ def test_local_harness_pricing_is_zero_cost_and_versioned() -> None:
         assert price.source_url.startswith("local://")
         assert price.version
         assert brain_cost(model, TokenUsage(input_tokens=10, output_tokens=10)) == Decimal("0.000000")
+
+
+def test_qwen_canonical_model_alias_resolves_to_wire_model(monkeypatch) -> None:
+    env_var = model_alias_env_var("qwen3-4b-instruct")
+    assert env_var == "SOLVENT_MODEL_ALIAS_QWEN3_4B_INSTRUCT"
+    monkeypatch.setenv(env_var, "Qwen/Qwen3-4B-Instruct-2507")
+
+    assert resolve_model_name("qwen3-4b-instruct") == "Qwen/Qwen3-4B-Instruct-2507"
+    assert brain_cost("qwen3-4b-instruct", TokenUsage(input_tokens=10, output_tokens=10)) == Decimal("0.000000")
 
 
 def test_brain_cost_includes_cache_token_rates() -> None:

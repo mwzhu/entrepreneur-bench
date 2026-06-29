@@ -21,6 +21,7 @@ from solvent.scoring.models import (
     SupportSignal,
     ToolSelectionSignal,
 )
+from solvent.scoring.reward_context import RewardContext, pricing_regret_over, selection_regret_over
 from solvent.scoring.optimal import omniscient_reference, reachable_jobs, realizable_reference
 from solvent.scoring.optimal import (
     ReferenceResult,
@@ -36,6 +37,14 @@ from solvent.scoring.optimal import (
 
 
 def score_trace(trace_path: Path) -> Scorecard:
+    return _builder_for_trace(trace_path).build()
+
+
+def build_reward_context(trace_path: Path) -> RewardContext:
+    return _builder_for_trace(trace_path).reward_context()
+
+
+def _builder_for_trace(trace_path: Path) -> ScorecardBuilder:
     events = load_events(trace_path)
     facts = facts_from_events(events)
     market = Market(
@@ -50,7 +59,7 @@ def score_trace(trace_path: Path) -> Scorecard:
         task_mix=facts.task_mix,
         difficulty_distribution=facts.difficulty_distribution,
     )
-    return ScorecardBuilder(trace_path, market.all_jobs(), facts).build()
+    return ScorecardBuilder(trace_path, market.all_jobs(), facts)
 
 
 class ScorecardBuilder:
@@ -232,12 +241,6 @@ class ScorecardBuilder:
         ]
         precision = len(good_chosen) / len(chosen) if chosen else None
         recall = len(good_chosen) / len(good_ids) if good_ids else None
-        chosen_value = self._scheduled_selection_value([self.jobs_by_id[job_id] for job_id in good_chosen])
-        missed_good = max(Decimal("0"), optimal_value - chosen_value)
-        chased_decoys = sum(
-            (abs(self._job_selection_value(self.reachable_by_id[job_id])) for job_id in decoys_chosen),
-            Decimal("0"),
-        )
         return SelectionSignal(
             chosen_jobs=len(chosen),
             good_chosen=len(good_chosen),
@@ -245,14 +248,21 @@ class ScorecardBuilder:
             good_available=len(good_ids),
             precision=precision,
             recall=recall,
-            selection_regret=(missed_good + chased_decoys).quantize(Decimal("0.01")),
+            selection_regret=selection_regret_over(
+                chosen,
+                good_ids,
+                self.jobs_by_id,
+                self.reachable_by_id,
+                optimal_value,
+                self._scheduled_selection_value,
+                self._job_selection_value,
+            ),
         )
 
     def _pricing(self) -> PricingSignal:
         accepted = self.facts.accepted_jobs
         good_ids = self._good_job_ids()
         ratios = []
-        surplus_left = Decimal("0")
         floor_accepts = 0
         counter_accepts = 0
         for job_id, fact in accepted.items():
@@ -266,7 +276,7 @@ class ScorecardBuilder:
             if job is None or job_id not in good_ids:
                 continue
             ratios.append(float(fact.contract_price / job.reservation_price))
-            surplus_left += job.reservation_price - fact.contract_price
+        surplus_left = pricing_regret_over(set(accepted), accepted, self.jobs_by_id, good_ids)
         rejected_counters = len(self.facts.counter_rejected_jobs) + sum(
             1
             for bid in self.facts.bids
@@ -438,6 +448,32 @@ class ScorecardBuilder:
             )
             for submission in self.facts.submissions
         ]
+
+    def reward_context(self) -> RewardContext:
+        tool_selection = self._tool_selection()
+        delivered_job_ids = {attempt.job_id for attempt in self._delivery_attempts()}
+        good_ids, optimal_value = self._selection_reference()
+        return RewardContext(
+            trace_path=self.trace_path,
+            facts=self.facts,
+            jobs_by_id=self.jobs_by_id,
+            accepted_facts=self.facts.accepted_jobs,
+            delivered_job_ids=delivered_job_ids,
+            good_ids=good_ids,
+            delivery_menu=self.delivery_menu,
+            expected_net_revenue=self._expected_net_revenue(),
+            oracle_tool_regret=tool_selection.oracle_tool_regret if tool_selection is not None else Decimal("0"),
+            delivered_selection_regret=selection_regret_over(
+                delivered_job_ids,
+                good_ids,
+                self.jobs_by_id,
+                self.reachable_by_id,
+                optimal_value,
+                self._scheduled_selection_value,
+                self._job_selection_value,
+            ),
+            terminated_reason=self.facts.terminated_reason,
+        )
 
 
 def scorecard_to_dict(scorecard: Scorecard) -> dict[str, Any]:

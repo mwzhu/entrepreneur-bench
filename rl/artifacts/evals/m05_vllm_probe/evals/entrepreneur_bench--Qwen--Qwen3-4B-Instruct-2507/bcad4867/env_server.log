@@ -1,0 +1,6 @@
+2026-06-29 15:17:09 - verifiers.serve.server.env_server.ZMQEnvServer - INFO - Initializing ZMQEnvServer to serve entrepreneur_bench (env_args={'horizon_days': 2, 'split': 'train', 'trace_dir': 'rl/artifacts/traces/m05_vllm_probe'}, extra_env_kwargs={'timeout_seconds': 900.0, 'concurrency': 1}, num_workers=1)
+2026-06-29 15:17:09 - verifiers.serve.server.env_server.ZMQEnvServer - INFO - ZMQEnvServer started on tcp://127.0.0.1:60621
+2026-06-29 15:17:09 - verifiers.serve.server.env_router.EnvRouter - INFO - Started worker (id=0, name=entrepreneur_bench-0, address=ipc:///tmp/vf-c48514a88a17-entrepreneur_bench-0, pid=50095)
+2026-06-29 15:17:11 - verifiers.utils.process_utils - INFO - Death pipe closed — parent is gone, sending SIGTERM to self
+2026-06-29 15:17:11 - verifiers.serve.server.env_router.EnvRouter - INFO - Router shut down
+2026-06-29 15:17:11 - verifiers.serve.server.env_server.ZMQEnvServer - INFO - ZMQEnvServer shut down

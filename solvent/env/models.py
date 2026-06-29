@@ -46,6 +46,7 @@ class EnvConfig:
     reputation_concede_delta: Decimal = Decimal("-0.10")
     reputation_gate_threshold: Decimal = Decimal("1.00")
     reputation_high_value_cutoff: Decimal = Decimal("1.50")
+    breach_fee_frac: Decimal = Decimal("0")
 
 
 @dataclass(frozen=True)

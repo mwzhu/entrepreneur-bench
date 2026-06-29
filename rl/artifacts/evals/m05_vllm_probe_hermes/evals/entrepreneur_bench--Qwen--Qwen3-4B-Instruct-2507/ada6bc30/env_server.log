@@ -1,0 +1,15 @@
+2026-06-29 15:20:48 - verifiers.serve.server.env_server.ZMQEnvServer - INFO - Initializing ZMQEnvServer to serve entrepreneur_bench (env_args={'horizon_days': 2, 'split': 'train', 'trace_dir': 'rl/artifacts/traces/m05_vllm_probe_hermes'}, extra_env_kwargs={'timeout_seconds': 900.0, 'concurrency': 1}, num_workers=1)
+2026-06-29 15:20:48 - verifiers.serve.server.env_server.ZMQEnvServer - INFO - ZMQEnvServer started on tcp://127.0.0.1:60697
+2026-06-29 15:20:48 - verifiers.serve.server.env_router.EnvRouter - INFO - Started worker (id=0, name=entrepreneur_bench-0, address=ipc:///tmp/vf-5491d105b996-entrepreneur_bench-0, pid=51984)
+2026-06-29 15:20:58 - verifiers.serve.server.env_router.EnvRouter - INFO - Active tasks: 0 (W0: ?)
+  Server | Lag: min=0ms mean=2ms median=2ms p90=2ms p99=2ms max=2ms (n=99)
+  W0     | no stats yet
+2026-06-29 15:21:08 - verifiers.serve.server.env_router.EnvRouter - INFO - Active tasks: 1 (W0: 1)
+  Server | Lag: min=0ms mean=2ms median=2ms p90=2ms p99=2ms max=2ms (n=197)
+  W0     | Lag: min=0ms mean=3ms median=2ms p90=2ms p99=12ms max=61ms (n=97)
+2026-06-29 15:21:19 - verifiers.serve.server.env_router.EnvRouter - INFO - Active tasks: 1 (W0: 1)
+  Server | Lag: min=0ms mean=2ms median=2ms p90=2ms p99=2ms max=2ms (n=297)
+  W0     | Lag: min=0ms mean=2ms median=2ms p90=2ms p99=11ms max=61ms (n=195)
+2026-06-29 15:21:28 - verifiers.utils.process_utils - INFO - Death pipe closed — parent is gone, sending SIGTERM to self
+2026-06-29 15:21:28 - verifiers.serve.server.env_router.EnvRouter - INFO - Router shut down
+2026-06-29 15:21:28 - verifiers.serve.server.env_server.ZMQEnvServer - INFO - ZMQEnvServer shut down

@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 def parse_seeds(raw: str) -> list[int]:
-    if raw in {"dev", "test"}:
+    if raw in {"dev", "test", "train"}:
         return read_seed_split(raw)
     path = Path(raw)
     if path.exists():
@@ -13,7 +13,7 @@ def parse_seeds(raw: str) -> list[int]:
 
 
 def seed_split_label(raw: str) -> str:
-    return raw if raw in {"dev", "test"} else "ad_hoc"
+    return raw if raw in {"dev", "test", "train"} else "ad_hoc"
 
 
 def read_seed_split(name: str) -> list[int]:

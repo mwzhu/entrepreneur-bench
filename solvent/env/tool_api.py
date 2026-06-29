@@ -97,6 +97,17 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     ),
 }
 
+MODE_ONLY_TOOLS = {
+    "direct": {"submit"},
+    "tool_mediated": {"deliver", "list_models"},
+}
+
+
+def schemas_for_delivery_mode(delivery_mode: str) -> dict[str, dict[str, Any]]:
+    allowed = MODE_ONLY_TOOLS.get(delivery_mode, set())
+    excluded = {tool for tools in MODE_ONLY_TOOLS.values() for tool in tools} - allowed
+    return {name: schema for name, schema in TOOL_SCHEMAS.items() if name not in excluded}
+
 
 class ToolAdapter:
     """Public tool-call boundary shared by stubs and model harnesses."""
@@ -104,19 +115,8 @@ class ToolAdapter:
     def __init__(self, env: Environment):
         self.env = env
 
-    # Tools whose availability depends on the episode's delivery mode. Advertising
-    # only the mode-appropriate tools prevents wasted turns on wrong-mode calls
-    # (e.g. submit in tool-mediated mode); the env still guards these as a backstop.
-    _MODE_ONLY_TOOLS = {
-        "direct": {"submit"},
-        "tool_mediated": {"deliver", "list_models"},
-    }
-
     def schemas(self) -> dict[str, dict[str, Any]]:
-        mode = self.env.config.delivery_mode
-        allowed = self._MODE_ONLY_TOOLS.get(mode, set())
-        excluded = {tool for tools in self._MODE_ONLY_TOOLS.values() for tool in tools} - allowed
-        return {name: schema for name, schema in TOOL_SCHEMAS.items() if name not in excluded}
+        return schemas_for_delivery_mode(self.env.config.delivery_mode)
 
     def observe(self) -> dict[str, Any]:
         jobs = [job.to_public() for job in self.env.available_jobs()]

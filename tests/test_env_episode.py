@@ -194,6 +194,46 @@ def test_finalize_is_idempotent_and_terminated_event_emitted_once(tmp_path: Path
     assert [event["kind"] for event in _events(first.trace_path)].count("terminated") == 1
 
 
+def test_finalize_debits_breach_fee_once_before_terminated(tmp_path: Path) -> None:
+    env = Environment(_config(tmp_path / "breach.jsonl", breach_fee_frac=Decimal("0.25")))
+    try:
+        job = env.list_jobs()[0]
+        accepted = env.accept(job.id)
+        contract_price = Decimal(str(accepted["contract_price"]))
+    finally:
+        first = env.finalize()
+        second = env.finalize()
+
+    events = _events(first.trace_path)
+    breach_events = [event for event in events if event["kind"] == "breach"]
+    assert first == second
+    assert len(breach_events) == 1
+    assert events[-2]["kind"] == "breach"
+    assert events[-1]["kind"] == "terminated"
+    assert breach_events[0]["payload"]["fee"] == str((contract_price * Decimal("0.25")).quantize(Decimal("0.01")))
+    assert [event["kind"] for event in events].count("terminated") == 1
+
+
+def test_finalize_relabels_breach_caused_insolvency(tmp_path: Path) -> None:
+    env = Environment(
+        _config(
+            tmp_path / "breach-insolvent.jsonl",
+            start_balance=Decimal("1.00"),
+            tool_call_cost=Decimal("0"),
+            breach_fee_frac=Decimal("10.00"),
+        )
+    )
+    try:
+        job = env.list_jobs()[0]
+        env.accept(job.id)
+    finally:
+        summary = env.finalize()
+
+    assert summary.terminated_reason == "insolvent"
+    assert summary.end_balance < 0
+    assert _events(summary.trace_path)[-1]["payload"]["reason"] == "insolvent"
+
+
 def test_invalid_agent_action_emits_invalid_action_with_burn(tmp_path: Path) -> None:
     env = Environment(_config(tmp_path / "invalid.jsonl"))
     try:
@@ -206,16 +246,23 @@ def test_invalid_agent_action_emits_invalid_action_with_burn(tmp_path: Path) -> 
     assert invalid[0]["burn_delta"] == "0.01"
 
 
-def _config(trace_path: Path) -> EnvConfig:
+def _config(
+    trace_path: Path,
+    *,
+    start_balance: Decimal = Decimal("20.00"),
+    tool_call_cost: Decimal = Decimal("0.01"),
+    breach_fee_frac: Decimal = Decimal("0"),
+) -> EnvConfig:
     return EnvConfig(
         seed=42,
         config_id="stub:happy_path",
-        start_balance=Decimal("20.00"),
+        start_balance=start_balance,
         horizon_ticks=3,
         overhead_per_tick=Decimal("0.05"),
-        tool_call_cost=Decimal("0.01"),
+        tool_call_cost=tool_call_cost,
         trace_path=trace_path,
         delivery_mode="direct",
+        breach_fee_frac=breach_fee_frac,
     )
 
 

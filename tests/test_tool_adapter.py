@@ -4,7 +4,7 @@ from pathlib import Path
 
 from solvent.env.env import Environment
 from solvent.env.models import EnvConfig
-from solvent.env.tool_api import ToolAdapter
+from solvent.env.tool_api import ToolAdapter, schemas_for_delivery_mode
 
 
 def test_tool_adapter_exposes_v0_4_action_space_and_public_observation(tmp_path: Path) -> None:
@@ -62,6 +62,17 @@ def test_schemas_are_scoped_to_delivery_mode(tmp_path: Path) -> None:
     finally:
         direct.env.finalize()
         tool.env.finalize()
+
+
+def test_public_schema_helper_matches_adapter_mode_scoping(tmp_path: Path) -> None:
+    env = Environment(_config(tmp_path / "public-helper.jsonl", delivery_mode="tool_mediated"))
+    api = ToolAdapter(env)
+    try:
+        assert schemas_for_delivery_mode("tool_mediated") == api.schemas()
+        assert "deliver" in schemas_for_delivery_mode("tool_mediated")
+        assert "submit" not in schemas_for_delivery_mode("tool_mediated")
+    finally:
+        env.finalize()
 
 
 def test_adapter_malformed_call_emits_one_invalid_action(tmp_path: Path) -> None:

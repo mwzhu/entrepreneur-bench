@@ -1,0 +1,9 @@
+2026-06-29 15:20:50 - verifiers.utils.env_utils - INFO - Loading environment: entrepreneur_bench
+2026-06-29 15:20:50 - verifiers.utils.env_utils - INFO - Using provided args: trace_dir=rl/artifacts/traces/m05_vllm_probe_hermes, horizon_days=2, split=train
+2026-06-29 15:20:50 - verifiers.utils.env_utils - INFO - Using default args: job_ttl=True, brain_model='qwen3-4b-instruct', breach_fee_frac=0.25, delivery_mode='tool_mediated'
+2026-06-29 15:20:50 - verifiers.utils.env_utils - INFO - Successfully loaded environment 'entrepreneur_bench'
+2026-06-29 15:20:50 - verifiers.utils.thread_utils - INFO - Scaled default executor and 0 registered executor(s) ()
+2026-06-29 15:20:50 - verifiers.serve.server.env_worker.EnvWorker - INFO - Initialized worker entrepreneur_bench-0 on ipc:///tmp/vf-5491d105b996-entrepreneur_bench-0
+2026-06-29 15:20:50 - verifiers.serve.server.env_worker.EnvWorker - INFO - Starting worker entrepreneur_bench-0
+2026-06-29 15:21:28 - verifiers.utils.process_utils - INFO - Death pipe closed — parent is gone, sending SIGTERM to self
+2026-06-29 15:21:28 - verifiers.serve.server.env_worker.EnvWorker - INFO - Shut down worker entrepreneur_bench-0

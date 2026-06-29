@@ -9,7 +9,7 @@ from solvent.env.errors import InvalidActionError
 from solvent.env.models import EnvConfig
 from solvent.env.tool_api import ToolAdapter
 from solvent.scoring.events import facts_from_events, load_events
-from solvent.scoring.scorecard import score_trace
+from solvent.scoring.scorecard import build_reward_context, score_trace
 
 
 def test_deliver_path_normalizes_into_delivery_attempt_fact(tmp_path: Path) -> None:
@@ -33,6 +33,7 @@ def test_deliver_path_normalizes_into_delivery_attempt_fact(tmp_path: Path) -> N
     assert attempt.attempt_index == 0
 
     scorecard = score_trace(summary.trace_path)
+    reward_context = build_reward_context(summary.trace_path)
     assert scorecard.delivery.submitted_jobs == 1
     assert scorecard.delivery.passed_jobs == 1
     assert scorecard.coherence.dropped_jobs == 0
@@ -42,6 +43,8 @@ def test_deliver_path_normalizes_into_delivery_attempt_fact(tmp_path: Path) -> N
     assert scorecard.tool_selection.tool_price_charged == Decimal("45.00")
     assert scorecard.compute is not None
     assert scorecard.compute.brain_cost == Decimal("0")
+    assert reward_context.delivered_job_ids == {job["id"]}
+    assert job["id"] in reward_context.accepted_facts
 
 
 def test_deliver_rejects_unresolved_pending_manipulation(tmp_path: Path) -> None:

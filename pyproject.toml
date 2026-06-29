@@ -11,12 +11,14 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+rl = ["verifiers==0.1.14; python_version >= '3.10' and python_version < '3.14'", "wandb", "openai"]
 
 [project.scripts]
 solvent = "solvent.cli.main:main"
 
 [tool.setuptools.packages.find]
-include = ["solvent*"]
+where = [".", "rl"]
+include = ["solvent*", "entrepreneur_bench*"]
 
 [tool.setuptools.package-data]
 "solvent.viewer" = ["static/*"]
@@ -24,5 +26,5 @@ include = ["solvent*"]
 "solvent" = ["configs/*.txt"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]
+testpaths = ["tests", "rl/tests"]
+pythonpath = [".", "rl"]
