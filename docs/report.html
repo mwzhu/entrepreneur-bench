@@ -111,14 +111,10 @@
 
   <h2>Intro</h2>
   <p><b>Problem Statement:</b> Can AI turn funding into revenue online?</p>
-  <p><b>Concept Generation:</b></p>
-  <ul>
-    <li><a href="https://github.com/Conway-Research/automaton">https://github.com/Conway-Research/automaton</a>: OpenClaw for Internet Money</li>
-    <li>No structured and reproducible way of evaluating Automaton (outside of real world performance)</li>
-    <li>Apply Vending-Bench framework idea of generating an environment simulation to evaluate Automaton</li>
-  </ul>
-  <p><b>Vertical Chosen:</b> Freelance software services (Upwork) due to the possibility of leveraging SWE-lancer dataset (considered other online business models like SaaS and ecommerce).</p>
-  <p><b>Goal:</b> Measuring not just total profit as output but also other capabilities crucial to running business: problem selection, pricing, tool selection, resource allocation.</p>
+
+  <p><b>Project Description:</b> Entrepreneur-Bench is a benchmark and evaluation framework that measures whether an AI agent can run an online business on its own, turning starting capital into revenue over a long, self-directed run. I chose freelance software services (Upwork-style contracting) as the business model, in part because job difficulty and delivery could later be grounded in the real <a href="https://arxiv.org/abs/2502.12115">SWE-lancer</a> dataset as a future extension. To do this, I built an agent harness that puts a model in a persistent decision loop and an environment simulation that presents a stream of coding jobs on a job board, handles price negotiation, and models the delivery of completed work. Each run, the agent must browse and select jobs, negotiate prices, hire a coding model to deliver the work, and manage its balance across a 30-day horizon.</p>
+
+  <p><b>Goal:</b> Measuring not just total profit as output but also other capabilities crucial to running a business: problem selection, pricing, tool selection, and resource allocation.</p>
 
   <h2>Method</h2>
 
