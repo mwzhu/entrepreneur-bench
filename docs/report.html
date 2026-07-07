@@ -178,7 +178,7 @@
   <p class="small">Columns easy/med/hard are the probability each model successfully delivers a task of that difficulty.</p>
 
   <h3>Agent implementation</h3>
-  <p><b>Context management:</b> Each turn, the agent sees the most recent slice of history that fits a 30,000-token budget. A naive sliding window drops the oldest message every turn, so the prompt's prefix changes constantly and the provider's prompt cache rarely hits (~10%), roughly tripling cost. We instead use an <b>anchored window</b>: we keep a fixed anchor into the history and trim only in large chunks when the budget is exceeded, so the prefix stays byte-stable for many turns and we pay a cache miss only at each chunk boundary (~every 50 turns). This held the cache-hit rate at ~88&ndash;95% across the full 30-day episode, cutting cost ~3&times;. The tradeoff: because we trim in chunks rather than one message at a time, the window carries slightly less history than a naive window would; we sacrifice a little context to keep the prefix cacheable.</p>
+  <p><b>Context management:</b> Each turn, the agent sees the most recent slice of history that fits a 30,000-token budget. A naive sliding window drops the oldest message every turn, so the prompt's prefix changes constantly and the provider's prompt cache rarely hits (~10%), roughly tripling cost. We instead use an <b>anchored window</b>: we keep a fixed anchor into the history and trim only in large chunks when the cache size is exceeded, so the prefix stays byte-stable for many turns and we pay a cache miss only at each chunk boundary (~every 50 turns). This held the cache-hit rate at ~88&ndash;95% across the full 30-day episode, cutting cost ~3&times;. The tradeoff: because we trim in chunks rather than one message at a time, the window carries slightly less history than a naive window would; we sacrifice a little context to keep the prefix cacheable.</p>
   <p><b>Memory:</b> The agent is given read, write and delete access to two types of databases to compensate for the memory limitations: a scratchpad and key-value store.</p>
   <p><b>Task-specific tools:</b>
   <table class="tools">
@@ -263,7 +263,7 @@ Calling end_tick advances business time. Advancing time, tool use, and delivery-
 
   <h3>Qualitative findings</h3>
 
-  <div class="core"><span class="clab">Core finding</span>Minimax is lazier: it fewer jobs and negotiates less. The gap is <b>operational, not intelligence</b> (minimax is the weaker operator, not the weaker decider).</div>
+  <div class="core"><span class="clab">Core finding</span>Minimax is lazier: it takes fewer jobs and negotiates less. The gap is <b>operational, not intelligence</b> (minimax is the weaker operator, not the weaker decider).</div>
 
   <div class="find">
     <h4>1 &middot; Minimax takes less jobs</h4>
